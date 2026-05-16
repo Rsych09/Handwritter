@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Пидарский Генератор конспектов</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @font-face {
+            font-family: 'HandwrittenFont';
+            src: url('/fonts/hand.ttf') format('truetype');
+        }
+        /* Стандартный аккуратный ползунок темной темы */
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            transition: transform 0.1s ease, background-color 0.1s ease;
+            box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
+        }
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            background: #60a5fa;
+        }
+    </style>
+</head>
+<body class="bg-[#0f111a] font-sans h-screen flex flex-col overflow-hidden antialiased text-slate-300">
+
+    <header class="bg-[#161925] shadow-md px-6 py-4 flex justify-between items-center z-10 border-b border-slate-800/80">
+        <div class="flex items-center gap-3">
+            <div class="bg-blue-600 text-white p-2 rounded-lg shadow-lg shadow-blue-500/20">
+                <i data-lucide="notebook-pen" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <h1 class="text-lg font-bold tracking-tight text-white">Генератор Конспектов</h1>
+                <p class="text-xs text-slate-400">Создай идеальный рукописный текст за пару кликов</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2 text-xs font-medium text-slate-400 bg-[#1a1d29] px-3 py-1.5 rounded-full border border-slate-800">
+            <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+            Локальный Canvas рендеринг (0ms)
+        </div>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden">
+        
+        <div class="w-[400px] bg-[#161925] shadow-2xl flex flex-col overflow-y-auto border-r border-slate-800/80 z-5">
+            
+            <div class="p-5 border-b border-slate-800/80 bg-[#11131c]">
+                <label class="flex items-center gap-2 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                    <i data-lucide="align-left" class="w-4 h-4 text-slate-500"></i> Текст конспекта
+                </label>
+                <textarea id="textInput" rows="5" class="w-full p-3 bg-[#161925] border border-slate-700/60 rounded-xl resize-none text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-blue-500 font-mono text-sm shadow-inner transition-all placeholder-slate-600" placeholder="Вставь сюда свой текст...">1) True
+2) False
+3) True</textarea>
+            </div>
+
+            <div class="flex border-b border-slate-800/80 text-sm bg-[#11131c]">
+                <button id="tabMainBtn" class="flex-1 py-3 font-medium border-b-2 border-blue-500 text-blue-400 flex items-center justify-center gap-2 transition-all cursor-pointer bg-[#161925]">
+                    <i data-lucide="sliders" class="w-4 h-4"></i> Главные
+                </button>
+                <button id="tabRandomBtn" class="flex-1 py-3 font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-200 hover:bg-[#1a1d29] flex items-center justify-center gap-2 transition-all cursor-pointer">
+                    <i data-lucide="sparkles" class="w-4 h-4"></i> Живой почерк
+                </button>
+            </div>
+
+            <div class="p-5 flex flex-col gap-5 flex-1 bg-[#161925]">
+                
+                <div id="tabMain" class="flex flex-col gap-5">
+                    <div class="bg-[#11131c] p-4 rounded-xl border border-slate-800/60 flex flex-col gap-4">
+                        <div>
+                            <div class="flex justify-between text-xs font-medium text-slate-300 mb-1.5">
+                                <span class="flex items-center gap-1"><i data-lucide="type" class="w-3.5 h-3.5 text-slate-400"></i> Размер шрифта</span>
+                                <span id="val_font_size" class="font-bold text-blue-400 bg-blue-950/40 px-1.5 py-0.5 rounded border border-blue-900/40">23</span>
+                            </div>
+                            <input type="range" id="font_size" min="10" max="60" value="23" class="w-full cursor-pointer h-1.5 bg-slate-800 rounded-lg appearance-none">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-xs font-medium text-slate-300 mb-1.5">
+                                <span class="flex items-center gap-1"><i data-lucide="rows" class="w-3.5 h-3.5 text-slate-400"></i> Межстрочный интервал</span>
+                                <span id="val_line_spacing" class="font-bold text-blue-400 bg-blue-950/40 px-1.5 py-0.5 rounded border border-blue-900/40">38</span>
+                            </div>
+                            <input type="range" id="line_spacing" min="10" max="100" value="38" class="w-full cursor-pointer h-1.5 bg-slate-800 rounded-lg appearance-none">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-xs font-medium text-slate-300 mb-1.5">
+                                <span class="flex items-center gap-1"><i data-lucide="space" class="w-3.5 h-3.5 text-slate-400"></i> Между словами (px)</span>
+                                <span id="val_word_spacing" class="font-bold text-blue-400 bg-blue-950/40 px-1.5 py-0.5 rounded border border-blue-900/40">10</span>
+                            </div>
+                            <input type="range" id="word_spacing" min="0" max="40" value="10" class="w-full cursor-pointer h-1.5 bg-slate-800 rounded-lg appearance-none">
+                        </div>
+                    </div>
+
+                    <div class="bg-[#11131c] p-4 rounded-xl border border-slate-800/60 flex flex-col gap-4">
+                        <div>
+                            <div class="flex justify-between text-xs font-medium text-slate-300 mb-1.5">
+                                <span class="flex items-center gap-1"><i data-lucide="arrow-left-to-line" class="w-3.5 h-3.5 text-slate-400"></i> Отступ слева (Поля)</span>
+                                <span id="val_margin_left" class="font-bold text-blue-400 bg-blue-950/40 px-1.5 py-0.5 rounded border border-blue-900/40">140</span>
+                            </div>
+                            <input type="range" id="margin_left" min="0" max="500" value="140" class="w-full cursor-pointer h-1.5 bg-slate-800 rounded-lg appearance-none">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-xs font-medium text-slate-300 mb-1.5">
+                                <span class="flex items-center gap-1"><i data-lucide="arrow-up-to-line" class="w-3.5 h-3.5 text-slate-400"></i> Верхний отступ</span>
+                                <span id="val_start_y" class="font-bold text-blue-400 bg-blue-950/40 px-1.5 py-0.5 rounded border border-blue-900/40">72</span>
+                            </div>
+                            <input type="range" id="start_y" min="0" max="500" value="72" class="w-full cursor-pointer h-1.5 bg-slate-800 rounded-lg appearance-none">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tabRandom" class="flex flex-col gap-5 hidden">
+                    <div class="bg-amber-950/30 p-4 rounded-xl border border-amber-900/30 text-xs text-amber-300 flex gap-2">
+                        <i data-lucide="info" class="w-4 h-4 shrink-0 mt-0.5 text-amber-500"></i>
+                        <span>Эти параметры ломают идеальную геометрию шрифта, имитируя естественные движения человеческой руки при письме.</span>
+                    </div>
+
+                    <div class="bg-[#11131c] p-4 rounded-xl border border-slate-800/60 flex flex-col gap-4">
+                        <div>
+                            <div class="flex justify-between text-xs font-medium text-slate-300 mb-1.5">
+                                <span class="flex items-center gap-1"><i data-lucide="rotate-cw" class="w-3.5 h-3.5 text-slate-400"></i> Наклон всего текста (°)</span>
+                                <span id="val_text_rotate" class="font-bold text-blue-400 bg-blue-950/40 px-1.5 py-0.5 rounded border border-blue-900/40">0</span>
+                            </div>
+                            <input type="range" id="text_rotate" min="-6" max="6" value="0" step="0.2" class="w-full cursor-pointer h-1.5 bg-slate-800 rounded-lg appearance-none">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-xs font-medium text-slate-300 mb-1.5">
+                                <span class="flex items-center gap-1"><i data-lucide="scissors" class="w-3.5 h-3.5 text-slate-400"></i> Хаотичный размер букв</span>
+                                <span id="val_random_size" class="font-bold text-blue-400 bg-blue-950/40 px-1.5 py-0.5 rounded border border-blue-900/40">0</span>
+                            </div>
+                            <input type="range" id="random_size" min="0" max="8" value="0" class="w-full cursor-pointer h-1.5 bg-slate-800 rounded-lg appearance-none">
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="flex-1 p-8 flex flex-col justify-center items-center bg-[#0f111a] overflow-hidden gap-5">
+            
+            <div class="max-h-[calc(100vh-14rem)] max-w-full bg-[#161925] shadow-2xl shadow-black/80 rounded-2xl p-3 flex justify-center items-center overflow-hidden border border-slate-800/60 ring-4 ring-slate-800/10">
+                <canvas id="noteCanvas" class="max-h-[calc(100vh-16rem)] w-auto object-contain rounded-lg shadow-2xl"></canvas>
+            </div>
+
+            <button id="downloadBtn" class="bg-blue-600 hover:bg-blue-500 active:scale-98 text-white font-semibold py-3 px-8 rounded-xl shadow-lg shadow-blue-500/10 hover:shadow-blue-500/20 transition-all cursor-pointer flex items-center gap-2 text-sm tracking-wide border border-blue-500/30">
+                <i data-lucide="download" class="w-4 h-4"></i> Скачать готовый конспект
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        // Логика переключения табов
+        const tabMainBtn = document.getElementById('tabMainBtn');
+        const tabRandomBtn = document.getElementById('tabRandomBtn');
+        const tabMain = document.getElementById('tabMain');
+        const tabRandom = document.getElementById('tabRandom');
+
+        tabMainBtn.addEventListener('click', () => {
+            tabMain.classList.remove('hidden');
+            tabRandom.classList.add('hidden');
+            tabMainBtn.className = "flex-1 py-3 font-medium border-b-2 border-blue-500 text-blue-400 flex items-center justify-center gap-2 transition-all cursor-pointer bg-[#161925]";
+            tabRandomBtn.className = "flex-1 py-3 font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-200 hover:bg-[#1a1d29] flex items-center justify-center gap-2 transition-all cursor-pointer";
+        });
+
+        tabRandomBtn.addEventListener('click', () => {
+            tabRandom.classList.remove('hidden');
+            tabMain.classList.add('hidden');
+            tabRandomBtn.className = "flex-1 py-3 font-medium border-b-2 border-blue-500 text-blue-400 flex items-center justify-center gap-2 transition-all cursor-pointer bg-[#161925]";
+            tabMainBtn.className = "flex-1 py-3 font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-200 hover:bg-[#1a1d29] flex items-center justify-center gap-2 transition-all cursor-pointer";
+        });
+
+        // Логика рендеринга на Canvas
+        const canvas = document.getElementById('noteCanvas');
+        const ctx = canvas.getContext('2d');
+        const inputs = ['textInput', 'font_size', 'line_spacing', 'word_spacing', 'margin_left', 'start_y', 'text_rotate', 'random_size'];
+        
+        const bgImage = new Image();
+        bgImage.src = '/assets/template.png';
+
+        function seededRandom(seed) {
+            const x = Math.sin(seed++) * 10000;
+            return x - Math.floor(x);
+        }
+
+        function wrapText(text, maxWidth, wordSpacing, fontSize, fontName) {
+            const paragraphs = text.split('\n');
+            const lines = [];
+            ctx.font = `${fontSize}px "${fontName}"`;
+
+            paragraphs.forEach(paragraph => {
+                if (paragraph.trim() === '') {
+                    lines.push([]);
+                    return;
+                }
+                const words = paragraph.split(' ');
+                let currentLineWords = [];
+                let currentWidth = 0;
+
+                words.forEach(word => {
+                    const wordWidth = ctx.measureText(word).width;
+                    const addedWidth = currentLineWords.length > 0 ? wordWidth + wordSpacing : wordWidth;
+
+                    if (currentWidth + addedWidth <= maxWidth) {
+                        currentLineWords.push(word);
+                        currentWidth += addedWidth;
+                    } else {
+                        lines.push(currentLineWords);
+                        currentLineWords = [word];
+                        currentWidth = wordWidth;
+                    }
+                });
+                if (currentLineWords.length > 0) lines.push(currentLineWords);
+            });
+            return lines;
+        }
+
+        function draw() {
+            if (!bgImage.complete) return;
+
+            const fontSize = parseInt(document.getElementById('font_size').value);
+            const lineSpacing = parseInt(document.getElementById('line_spacing').value);
+            const wordSpacing = parseInt(document.getElementById('word_spacing').value);
+            const marginLeft = parseInt(document.getElementById('margin_left').value);
+            const startY = parseInt(document.getElementById('start_y').value);
+            const textRotate = parseFloat(document.getElementById('text_rotate').value);
+            const randomSize = parseInt(document.getElementById('random_size').value);
+            const text = document.getElementById('textInput').value;
+
+            // Обновляем индикаторы
+            document.getElementById('val_font_size').innerText = fontSize;
+            document.getElementById('val_line_spacing').innerText = lineSpacing;
+            document.getElementById('val_word_spacing').innerText = wordSpacing;
+            document.getElementById('val_margin_left').innerText = marginLeft;
+            document.getElementById('val_start_y').innerText = startY;
+            document.getElementById('val_text_rotate').innerText = textRotate;
+            document.getElementById('val_random_size').innerText = randomSize;
+
+            if (canvas.width !== bgImage.width) {
+                canvas.width = bgImage.width;
+                canvas.height = bgImage.height;
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(bgImage, 0, 0);
+
+            ctx.fillStyle = "#1c2e74"; // Цвет чернил
+            ctx.textBaseline = "top";
+
+            const maxWidth = canvas.width - marginLeft - 60;
+            const lines = wrapText(text, maxWidth, wordSpacing, fontSize, 'HandwrittenFont');
+
+            let currentY = startY;
+            let charSeed = 0;
+
+            if (textRotate !== 0) {
+                ctx.save();
+                ctx.translate(marginLeft, startY);
+                ctx.rotate((textRotate * Math.PI) / 180);
+                ctx.translate(-marginLeft, -startY);
+            }
+
+            for (let i = 0; i < lines.length; i++) {
+                if (currentY + lineSpacing > canvas.height - 50) break;
+                
+                let currentX = marginLeft;
+                const words = lines[i];
+
+                words.forEach((word, wordIdx) => {
+                    if (wordIdx > 0) {
+                        currentX += wordSpacing;
+                    }
+
+                    for (let j = 0; j < word.length; j++) {
+                        const char = word[j];
+                        charSeed++;
+                        
+                        let sizeOffset = 0;
+                        if (randomSize > 0) {
+                            sizeOffset = (seededRandom(charSeed) * randomSize) - (randomSize / 2);
+                        }
+
+                        const finalFontSize = fontSize + sizeOffset;
+                        ctx.font = `${finalFontSize}px "HandwrittenFont"`;
+                        
+                        ctx.fillText(char, currentX, currentY);
+                        currentX += ctx.measureText(char).width;
+                    }
+                });
+
+                currentY += lineSpacing;
+            }
+
+            if (textRotate !== 0) {
+                ctx.restore();
+            }
+        }
+
+        inputs.forEach(id => {
+            document.getElementById(id).addEventListener('input', draw);
+        });
+
+        // Скачивание холста
+        document.getElementById('downloadBtn').addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = 'handwritten_classic_dark.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        });
+
+        bgImage.onload = () => { setTimeout(draw, 300); };
+        window.addEventListener('load', draw);
+    </script>
+</body>
+</html>
