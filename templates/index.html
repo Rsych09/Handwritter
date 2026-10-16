@@ -3,324 +3,1719 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Пидарский Генератор конспектов</title>
+    <title>Handwriter Studio — Генератор рукописных конспектов</title>
+    <!-- Tailwind CSS v4 Browser -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- JSZip for ZIP download -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- jsPDF for PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
     <style>
         @font-face {
             font-family: 'HandwrittenFont';
             src: url('/fonts/hand.ttf') format('truetype');
         }
-        /* Стандартный аккуратный ползунок темной темы */
+
+        /* Studio Minimalist Scrollbar */
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #09090b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #27272a;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3f3f46;
+        }
+
+        /* Studio Precision Range Sliders */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            background: #27272a;
+            height: 4px;
+            border-radius: 4px;
+            outline: none;
+        }
         input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
-            width: 16px;
-            height: 16px;
+            width: 15px;
+            height: 15px;
             border-radius: 50%;
-            background: #3b82f6;
+            background: #f4f4f5;
             cursor: pointer;
-            transition: transform 0.1s ease, background-color 0.1s ease;
-            box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
+            transition: transform 0.12s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.12s ease;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.15);
+            border: none;
         }
         input[type="range"]::-webkit-slider-thumb:hover {
-            transform: scale(1.2);
-            background: #60a5fa;
+            transform: scale(1.25);
+            background: #ffffff;
+            box-shadow: 0 0 10px rgba(229, 169, 60, 0.4), 0 0 0 1px rgba(229, 169, 60, 0.6);
+        }
+
+        /* Clean Number Inputs */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+            appearance: textfield;
+        }
+
+        /* Studio Range and Dropzone styling */
+
+        /* Dropzone Active Animation */
+        .dropzone-active {
+            border-color: #d4a373 !important;
+            background-color: rgba(212, 163, 115, 0.06) !important;
+            transform: scale(1.008);
         }
     </style>
 </head>
-<body class="bg-[#0f111a] font-sans h-screen flex flex-col overflow-hidden antialiased text-slate-300">
+<body class="bg-[#09090b] text-[#ededef] font-sans h-screen flex flex-col overflow-hidden antialiased select-none">
 
-    <header class="bg-[#161925] shadow-md px-6 py-4 flex justify-between items-center z-10 border-b border-slate-800/80">
-        <div class="flex items-center gap-3">
-            <div class="bg-blue-600 text-white p-2 rounded-lg shadow-lg shadow-blue-500/20">
-                <i data-lucide="notebook-pen" class="w-6 h-6"></i>
+    <!-- Top Studio Navigation Bar -->
+    <header class="bg-[#0f0f12]/95 backdrop-blur-lg px-6 py-3 flex justify-between items-center z-30 border-b border-zinc-800/80 shrink-0">
+        <!-- Studio Brand -->
+        <div class="flex items-center gap-3.5">
+            <!-- Monogram / Icon -->
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-zinc-800 to-zinc-950 flex items-center justify-center text-amber-300/90 shadow-md border border-zinc-700/50">
+                <i data-lucide="pen-tool" class="w-4 h-4"></i>
             </div>
             <div>
-                <h1 class="text-lg font-bold tracking-tight text-white">Генератор Конспектов</h1>
-                <p class="text-xs text-slate-400">Создай идеальный рукописный текст за пару кликов</p>
+                <div class="flex items-center gap-2.5">
+                    <div class="flex items-baseline gap-1.5">
+                        <span class="text-sm font-bold tracking-tight text-white uppercase font-mono">HANDWRITER</span>
+                        <span class="text-[10px] tracking-[0.25em] font-semibold text-amber-400 uppercase">STUDIO</span>
+                    </div>
+                    <span class="text-[9px] font-semibold tracking-wider bg-zinc-800/80 text-zinc-300 border border-zinc-700/60 px-2 py-0.5 rounded-full uppercase">
+                        PRO EDITION
+                    </span>
+                </div>
+                <p class="text-[11px] text-zinc-400 tracking-normal">Профессиональный генератор рукописных конспектов</p>
             </div>
         </div>
-        <div class="flex items-center gap-2 text-xs font-medium text-slate-400 bg-[#1a1d29] px-3 py-1.5 rounded-full border border-slate-800">
-            <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-            Локальный Canvas рендеринг (0ms)
+
+        <!-- Live Statistics Chips -->
+        <div class="hidden md:flex items-center gap-3 bg-[#141418] px-4 py-1.5 rounded-full border border-zinc-800/90 text-xs">
+            <div class="flex items-center gap-1.5 text-zinc-300">
+                <i data-lucide="layers" class="w-3.5 h-3.5 text-amber-400"></i>
+                Листов: <span id="statPages" class="font-mono font-bold text-white">1</span>
+            </div>
+            <span class="text-zinc-700">•</span>
+            <div class="flex items-center gap-1.5 text-zinc-300">
+                <i data-lucide="align-left" class="w-3.5 h-3.5 text-zinc-400"></i>
+                Слов: <span id="statWords" class="font-mono font-bold text-zinc-200">0</span>
+            </div>
+            <span class="text-zinc-700">•</span>
+            <div class="flex items-center gap-1.5 text-zinc-300">
+                <i data-lucide="type" class="w-3.5 h-3.5 text-zinc-400"></i>
+                Знаков: <span id="statChars" class="font-mono font-bold text-zinc-200">0</span>
+            </div>
+            <span class="text-zinc-700">•</span>
+            <div class="flex items-center gap-1.5 text-zinc-400" id="saveIndicator">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                <span class="text-[11px] text-zinc-400">Автосохранение</span>
+            </div>
+        </div>
+
+        <!-- Studio Actions -->
+        <div class="flex items-center gap-2.5">
+            <button id="btnResetAll" class="px-3 py-2 rounded-xl text-xs font-medium text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60 transition-all cursor-pointer flex items-center gap-1.5" title="Сбросить все настройки к начальным">
+                <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                <span class="hidden sm:inline">Сброс</span>
+            </button>
+
+            <button id="btnDownloadZip" class="px-3.5 py-2 rounded-xl text-xs font-medium text-zinc-200 bg-[#16161a] hover:bg-[#1f2026] active:scale-98 transition-all cursor-pointer flex items-center gap-2 border border-zinc-700/60 shadow-sm">
+                <i data-lucide="archive" class="w-4 h-4 text-zinc-400"></i>
+                <span>.ZIP</span>
+            </button>
+
+            <!-- Titanium White Stark Action Button -->
+            <button id="btnDownloadPdf" class="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-950 bg-zinc-100 hover:bg-white active:scale-98 transition-all cursor-pointer flex items-center gap-2 shadow-[0_1px_3px_rgba(0,0,0,0.4)]">
+                <i data-lucide="file-down" class="w-4 h-4"></i>
+                <span>Экспорт в PDF</span>
+            </button>
         </div>
     </header>
 
-    <div class="flex flex-1 overflow-hidden">
-        
-        <div class="w-[400px] bg-[#161925] shadow-2xl flex flex-col overflow-y-auto border-r border-slate-800/80 z-5">
+    <!-- Main Workspace Container -->
+    <div class="flex flex-1 overflow-hidden relative">
+
+        <!-- Left Controls Sidebar -->
+        <aside class="w-[430px] bg-[#0f0f12] flex flex-col border-r border-zinc-800/80 z-20 shrink-0 select-text">
             
-            <div class="p-5 border-b border-slate-800/80 bg-[#11131c]">
-                <label class="flex items-center gap-2 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                    <i data-lucide="align-left" class="w-4 h-4 text-slate-500"></i> Текст конспекта
-                </label>
-                <textarea id="textInput" rows="5" class="w-full p-3 bg-[#161925] border border-slate-700/60 rounded-xl resize-none text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-blue-500 font-mono text-sm shadow-inner transition-all placeholder-slate-600" placeholder="Вставь сюда свой текст...">1) True
-2) False
-3) True</textarea>
+            <!-- Tabs Header -->
+            <div class="flex border-b border-zinc-800/80 bg-[#0a0a0d] text-xs font-medium shrink-0">
+                <button id="tabBtnText" class="flex-1 py-3 px-2 flex items-center justify-center gap-1.5 border-b-2 border-amber-500 text-zinc-100 bg-[#131317] transition-all cursor-pointer">
+                    <i data-lucide="edit-3" class="w-3.5 h-3.5 text-amber-400"></i>
+                    <span>Текст</span>
+                </button>
+                <button id="tabBtnPaper" class="flex-1 py-3 px-2 flex items-center justify-center gap-1.5 border-b-2 border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-[#121215] transition-all cursor-pointer">
+                    <i data-lucide="image" class="w-3.5 h-3.5"></i>
+                    <span>Лист и Фон</span>
+                </button>
+                <button id="tabBtnGeometry" class="flex-1 py-3 px-2 flex items-center justify-center gap-1.5 border-b-2 border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-[#121215] transition-all cursor-pointer">
+                    <i data-lucide="sliders" class="w-3.5 h-3.5"></i>
+                    <span>Геометрия</span>
+                </button>
+                <button id="tabBtnRealism" class="flex-1 py-3 px-2 flex items-center justify-center gap-1.5 border-b-2 border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-[#121215] transition-all cursor-pointer">
+                    <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                    <span>Реализм</span>
+                </button>
+                <button id="tabBtnPresets" class="flex-1 py-3 px-2 flex items-center justify-center gap-1.5 border-b-2 border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-[#121215] transition-all cursor-pointer">
+                    <i data-lucide="bookmark" class="w-3.5 h-3.5"></i>
+                    <span>Пресеты</span>
+                </button>
             </div>
 
-            <div class="flex border-b border-slate-800/80 text-sm bg-[#11131c]">
-                <button id="tabMainBtn" class="flex-1 py-3 font-medium border-b-2 border-blue-500 text-blue-400 flex items-center justify-center gap-2 transition-all cursor-pointer bg-[#161925]">
-                    <i data-lucide="sliders" class="w-4 h-4"></i> Главные
-                </button>
-                <button id="tabRandomBtn" class="flex-1 py-3 font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-200 hover:bg-[#1a1d29] flex items-center justify-center gap-2 transition-all cursor-pointer">
-                    <i data-lucide="sparkles" class="w-4 h-4"></i> Живой почерк
-                </button>
-            </div>
+            <!-- Tab Contents Scrollable Body -->
+            <div class="flex-1 overflow-y-auto p-4 space-y-3.5">
 
-            <div class="p-5 flex flex-col gap-5 flex-1 bg-[#161925]">
-                
-                <div id="tabMain" class="flex flex-col gap-5">
-                    <div class="bg-[#11131c] p-4 rounded-xl border border-slate-800/60 flex flex-col gap-4">
-                        <div>
-                            <div class="flex justify-between text-xs font-medium text-slate-300 mb-1.5">
-                                <span class="flex items-center gap-1"><i data-lucide="type" class="w-3.5 h-3.5 text-slate-400"></i> Размер шрифта</span>
-                                <span id="val_font_size" class="font-bold text-blue-400 bg-blue-950/40 px-1.5 py-0.5 rounded border border-blue-900/40">23</span>
+                <!-- 1. TAB: TEXT -->
+                <div id="tabText" class="space-y-3.5">
+                    <div class="bg-[#141418] p-4 rounded-2xl border border-zinc-800/80 shadow-sm">
+                        <div class="flex items-center justify-between mb-3">
+                            <label class="text-[11px] font-semibold text-zinc-300 uppercase tracking-widest flex items-center gap-2">
+                                <i data-lucide="file-edit" class="w-3.5 h-3.5 text-amber-400"></i> Текст конспекта
+                            </label>
+                            <div class="flex items-center gap-1.5">
+                                <button id="btnSampleText" class="text-[11px] px-2.5 py-1 bg-[#1a1a20] hover:bg-zinc-800 text-zinc-300 hover:text-white rounded-lg border border-zinc-700/50 transition-colors cursor-pointer flex items-center gap-1">
+                                    <i data-lucide="sparkle" class="w-3 h-3 text-amber-400"></i> Пример
+                                </button>
+                                <button id="btnClearText" class="text-[11px] px-2 py-1 bg-[#1a1a20] hover:bg-red-950/30 text-zinc-400 hover:text-red-400 rounded-lg border border-zinc-700/50 transition-colors cursor-pointer" title="Очистить текст">
+                                    <i data-lucide="trash-2" class="w-3 h-3"></i>
+                                </button>
                             </div>
-                            <input type="range" id="font_size" min="10" max="60" value="23" class="w-full cursor-pointer h-1.5 bg-slate-800 rounded-lg appearance-none">
                         </div>
 
-                        <div>
-                            <div class="flex justify-between text-xs font-medium text-slate-300 mb-1.5">
-                                <span class="flex items-center gap-1"><i data-lucide="rows" class="w-3.5 h-3.5 text-slate-400"></i> Межстрочный интервал</span>
-                                <span id="val_line_spacing" class="font-bold text-blue-400 bg-blue-950/40 px-1.5 py-0.5 rounded border border-blue-900/40">38</span>
-                            </div>
-                            <input type="range" id="line_spacing" min="10" max="100" value="38" class="w-full cursor-pointer h-1.5 bg-slate-800 rounded-lg appearance-none">
-                        </div>
+                        <textarea id="textInput" rows="12" class="w-full p-3.5 bg-[#0a0a0d] border border-zinc-800 rounded-xl resize-none text-zinc-100 focus:outline-none focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/20 font-mono text-[13px] shadow-inner transition-all placeholder-zinc-600 leading-relaxed" placeholder="Вставьте сюда любой текст лекции или конспекта..."></textarea>
 
-                        <div>
-                            <div class="flex justify-between text-xs font-medium text-slate-300 mb-1.5">
-                                <span class="flex items-center gap-1"><i data-lucide="space" class="w-3.5 h-3.5 text-slate-400"></i> Между словами (px)</span>
-                                <span id="val_word_spacing" class="font-bold text-blue-400 bg-blue-950/40 px-1.5 py-0.5 rounded border border-blue-900/40">10</span>
-                            </div>
-                            <input type="range" id="word_spacing" min="0" max="40" value="10" class="w-full cursor-pointer h-1.5 bg-slate-800 rounded-lg appearance-none">
+                        <div class="mt-2.5 flex items-center justify-between text-[11px] text-zinc-500">
+                            <span>Пустая строка создает естественный отступ абзаца</span>
+                            <span id="charCounter" class="font-mono text-zinc-400">0 знаков</span>
                         </div>
                     </div>
 
-                    <div class="bg-[#11131c] p-4 rounded-xl border border-slate-800/60 flex flex-col gap-4">
-                        <div>
-                            <div class="flex justify-between text-xs font-medium text-slate-300 mb-1.5">
-                                <span class="flex items-center gap-1"><i data-lucide="arrow-left-to-line" class="w-3.5 h-3.5 text-slate-400"></i> Отступ слева (Поля)</span>
-                                <span id="val_margin_left" class="font-bold text-blue-400 bg-blue-950/40 px-1.5 py-0.5 rounded border border-blue-900/40">140</span>
+                    <!-- Editorial Tip Card -->
+                    <div class="p-3.5 rounded-xl bg-[#141418] border border-zinc-800 text-xs text-zinc-400 flex items-start gap-2.5">
+                        <i data-lucide="info" class="w-4 h-4 text-amber-400 shrink-0 mt-0.5"></i>
+                        <span>Текст форматируется автоматически с учетом книжных полей тетради. Четные и нечетные листы размещаются в соответствии с переплетом.</span>
+                    </div>
+                </div>
+
+                <!-- 2. TAB: PAPER AND BACKGROUNDS -->
+                <div id="tabPaper" class="space-y-3.5 hidden">
+                    <!-- Custom Sheet Upload Box -->
+                    <div class="bg-[#141418] p-4 rounded-2xl border border-zinc-800/80 shadow-sm">
+                        <label class="text-[11px] font-semibold text-zinc-300 uppercase tracking-widest flex items-center gap-2 mb-1.5">
+                            <i data-lucide="upload-cloud" class="w-3.5 h-3.5 text-amber-400"></i> Загрузить своё фото листа
+                        </label>
+                        <p class="text-xs text-zinc-400 mb-3">
+                            Сфотографируйте свой блокнот или тетрадь. Файл мгновенно применится и сохранится на сервере:
+                        </p>
+
+                        <!-- Minimalist Precision Drag and Drop Zone -->
+                        <div id="dropzone" class="border border-dashed border-zinc-700/70 hover:border-amber-500/80 bg-[#0a0a0d] hover:bg-[#121216] p-5 rounded-xl flex flex-col items-center justify-center text-center cursor-pointer transition-all group">
+                            <input type="file" id="sheetFileInput" accept="image/png,image/jpeg,image/jpg,image/webp" class="hidden">
+                            <div class="w-9 h-9 rounded-full bg-zinc-800/80 text-amber-300/90 group-hover:scale-110 flex items-center justify-center mb-2 transition-transform border border-zinc-700/50">
+                                <i data-lucide="image-plus" class="w-4 h-4"></i>
                             </div>
-                            <input type="range" id="margin_left" min="0" max="500" value="140" class="w-full cursor-pointer h-1.5 bg-slate-800 rounded-lg appearance-none">
+                            <span class="text-xs font-semibold text-zinc-200">Перетащите фото листа сюда или нажмите для обзора</span>
+                            <span class="text-[10px] text-zinc-500 mt-1">PNG, JPG, JPEG, WEBP (до 15 МБ)</span>
+                        </div>
+                    </div>
+
+                    <!-- Available Templates Gallery -->
+                    <div class="bg-[#141418] p-4 rounded-2xl border border-zinc-800/80 shadow-sm">
+                        <div class="flex items-center justify-between mb-3">
+                            <label class="text-[11px] font-semibold text-zinc-300 uppercase tracking-widest flex items-center gap-2">
+                                <i data-lucide="layout-grid" class="w-3.5 h-3.5 text-amber-400"></i> Коллекция фонов
+                            </label>
+                            <span id="templatesCount" class="text-[10px] font-mono text-zinc-400 bg-zinc-800/80 px-2 py-0.5 rounded-full border border-zinc-700/60">3 фона</span>
                         </div>
 
-                        <div>
-                            <div class="flex justify-between text-xs font-medium text-slate-300 mb-1.5">
-                                <span class="flex items-center gap-1"><i data-lucide="arrow-up-to-line" class="w-3.5 h-3.5 text-slate-400"></i> Верхний отступ</span>
-                                <span id="val_start_y" class="font-bold text-blue-400 bg-blue-950/40 px-1.5 py-0.5 rounded border border-blue-900/40">72</span>
+                        <!-- Template Cards Grid -->
+                        <div id="templatesGrid" class="grid grid-cols-2 gap-2.5 max-h-[260px] overflow-y-auto pr-1">
+                            <!-- Cards inserted dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Mirroring / Page Layout Options -->
+                    <div class="bg-[#141418] p-4 rounded-2xl border border-zinc-800/80 shadow-sm space-y-3">
+                        <label class="text-[11px] font-semibold text-zinc-300 uppercase tracking-widest flex items-center gap-2">
+                            <i data-lucide="flip-horizontal" class="w-3.5 h-3.5 text-amber-400"></i> Оформление чётных страниц
+                        </label>
+                        <p class="text-xs text-zinc-400">
+                            В тетрадях красное поле находится с внешней стороны. Выберите режим:
+                        </p>
+
+                        <div class="space-y-2">
+                            <label class="flex items-center gap-2.5 text-xs text-zinc-300 cursor-pointer p-2.5 rounded-xl bg-[#0a0a0d] border border-zinc-800 hover:border-zinc-700">
+                                <input type="radio" name="mirrorMode" value="mirror" checked class="accent-amber-500">
+                                <div>
+                                    <div class="font-medium text-zinc-200">Зеркалить фон (рекомендуется)</div>
+                                    <div class="text-[10px] text-zinc-500">Автоматически отзеркаливает лист для правой страницы</div>
+                                </div>
+                            </label>
+                            <label class="flex items-center gap-2.5 text-xs text-zinc-300 cursor-pointer p-2.5 rounded-xl bg-[#0a0a0d] border border-zinc-800 hover:border-zinc-700">
+                                <input type="radio" name="mirrorMode" value="none" class="accent-amber-500">
+                                <div>
+                                    <div class="font-medium text-zinc-200">Без отзеркаливания</div>
+                                    <div class="text-[10px] text-zinc-500">Одинаковая ориентация для всех страниц</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Background Brightness and Contrast -->
+                    <div class="bg-[#141418] p-4 rounded-2xl border border-zinc-800/80 shadow-sm space-y-4">
+                        <label class="text-[11px] font-semibold text-zinc-300 uppercase tracking-widest flex items-center gap-2">
+                            <i data-lucide="sun-medium" class="w-3.5 h-3.5 text-amber-400"></i> Освещение и контраст фото
+                        </label>
+                        <div class="space-y-3">
+                            <div>
+                                <div class="flex justify-between text-xs text-zinc-300 mb-1">
+                                    <span>Яркость фона</span>
+                                    <span id="val_bg_brightness" class="font-mono text-zinc-300 font-bold">100%</span>
+                                </div>
+                                <input type="range" id="bg_brightness" min="50" max="150" value="100" class="w-full">
                             </div>
-                            <input type="range" id="start_y" min="0" max="500" value="72" class="w-full cursor-pointer h-1.5 bg-slate-800 rounded-lg appearance-none">
+                            <div>
+                                <div class="flex justify-between text-xs text-zinc-300 mb-1">
+                                    <span>Контрастность фона</span>
+                                    <span id="val_bg_contrast" class="font-mono text-zinc-300 font-bold">100%</span>
+                                </div>
+                                <input type="range" id="bg_contrast" min="50" max="150" value="100" class="w-full">
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div id="tabRandom" class="flex flex-col gap-5 hidden">
-                    <div class="bg-amber-950/30 p-4 rounded-xl border border-amber-900/30 text-xs text-amber-300 flex gap-2">
-                        <i data-lucide="info" class="w-4 h-4 shrink-0 mt-0.5 text-amber-500"></i>
-                        <span>Эти параметры ломают идеальную геометрию шрифта, имитируя естественные движения человеческой руки при письме.</span>
+                <!-- 3. TAB: GEOMETRY AND MARGINS -->
+                <div id="tabGeometry" class="space-y-3.5 hidden">
+                    <!-- Typography controls -->
+                    <div class="bg-[#141418] p-4 rounded-2xl border border-zinc-800/80 shadow-sm space-y-4">
+                        <div class="text-[11px] font-semibold text-zinc-300 uppercase tracking-widest flex items-center gap-2">
+                            <i data-lucide="type" class="w-3.5 h-3.5 text-amber-400"></i> Параметры шрифта
+                        </div>
+
+                        <!-- Font Size -->
+                        <div>
+                            <div class="flex justify-between items-center text-xs text-zinc-300 mb-1.5">
+                                <span class="flex items-center gap-1.5"><i data-lucide="scaling" class="w-3.5 h-3.5 text-zinc-500"></i> Размер букв</span>
+                                <input type="number" id="num_font_size" min="10" max="80" value="34" class="w-14 bg-[#0a0a0d] border border-zinc-800 rounded-lg px-2 py-0.5 text-xs text-zinc-200 font-mono text-center font-bold">
+                            </div>
+                            <input type="range" id="font_size" min="10" max="80" value="34" class="w-full">
+                        </div>
+
+                        <!-- Line Spacing -->
+                        <div>
+                            <div class="flex justify-between items-center text-xs text-zinc-300 mb-1.5">
+                                <span class="flex items-center gap-1.5"><i data-lucide="rows" class="w-3.5 h-3.5 text-zinc-500"></i> Межстрочный интервал</span>
+                                <input type="number" id="num_line_spacing" min="10" max="120" value="42" class="w-14 bg-[#0a0a0d] border border-zinc-800 rounded-lg px-2 py-0.5 text-xs text-zinc-200 font-mono text-center font-bold">
+                            </div>
+                            <input type="range" id="line_spacing" min="10" max="120" value="42" class="w-full">
+                        </div>
+
+                        <!-- Word Spacing -->
+                        <div>
+                            <div class="flex justify-between items-center text-xs text-zinc-300 mb-1.5">
+                                <span class="flex items-center gap-1.5"><i data-lucide="space" class="w-3.5 h-3.5 text-zinc-500"></i> Пробел между словами</span>
+                                <input type="number" id="num_word_spacing" min="0" max="60" value="10" class="w-14 bg-[#0a0a0d] border border-zinc-800 rounded-lg px-2 py-0.5 text-xs text-zinc-200 font-mono text-center font-bold">
+                            </div>
+                            <input type="range" id="word_spacing" min="0" max="60" value="10" class="w-full">
+                        </div>
+
+                        <!-- Paragraph First Line Indent (Красная строка) -->
+                        <div>
+                            <div class="flex justify-between items-center text-xs text-zinc-300 mb-1.5">
+                                <span class="flex items-center gap-1.5"><i data-lucide="indent" class="w-3.5 h-3.5 text-zinc-500"></i> Красная строка (абзац)</span>
+                                <input type="number" id="num_paragraph_indent" min="0" max="150" value="35" class="w-14 bg-[#0a0a0d] border border-zinc-800 rounded-lg px-2 py-0.5 text-xs text-zinc-200 font-mono text-center font-bold">
+                            </div>
+                            <input type="range" id="paragraph_indent" min="0" max="150" value="35" class="w-full">
+                        </div>
+
+                        <!-- Start Y -->
+                        <div>
+                            <div class="flex justify-between items-center text-xs text-zinc-300 mb-1.5">
+                                <span class="flex items-center gap-1.5"><i data-lucide="arrow-up-to-line" class="w-3.5 h-3.5 text-zinc-500"></i> Верхний отступ (Начало Y)</span>
+                                <input type="number" id="num_start_y" min="0" max="400" value="60" class="w-14 bg-[#0a0a0d] border border-zinc-800 rounded-lg px-2 py-0.5 text-xs text-zinc-200 font-mono text-center font-bold">
+                            </div>
+                            <input type="range" id="start_y" min="0" max="400" value="60" class="w-full">
+                        </div>
                     </div>
 
-                    <div class="bg-[#11131c] p-4 rounded-xl border border-slate-800/60 flex flex-col gap-4">
-                        <div>
-                            <div class="flex justify-between text-xs font-medium text-slate-300 mb-1.5">
-                                <span class="flex items-center gap-1"><i data-lucide="rotate-cw" class="w-3.5 h-3.5 text-slate-400"></i> Наклон всего текста (°)</span>
-                                <span id="val_text_rotate" class="font-bold text-blue-400 bg-blue-950/40 px-1.5 py-0.5 rounded border border-blue-900/40">0</span>
-                            </div>
-                            <input type="range" id="text_rotate" min="-6" max="6" value="0" step="0.2" class="w-full cursor-pointer h-1.5 bg-slate-800 rounded-lg appearance-none">
+                    <!-- Odd pages margins -->
+                    <div class="bg-[#141418] p-4 rounded-2xl border border-zinc-800/80 shadow-sm space-y-4">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[11px] font-semibold text-zinc-300 uppercase tracking-widest flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-amber-400"></span> Нечетные листы (1, 3, 5...)
+                            </span>
+                            <span class="text-[10px] text-zinc-400 bg-zinc-800/80 px-2 py-0.5 rounded border border-zinc-700/60 font-mono">Левая страница</span>
                         </div>
 
                         <div>
-                            <div class="flex justify-between text-xs font-medium text-slate-300 mb-1.5">
-                                <span class="flex items-center gap-1"><i data-lucide="scissors" class="w-3.5 h-3.5 text-slate-400"></i> Хаотичный размер букв</span>
-                                <span id="val_random_size" class="font-bold text-blue-400 bg-blue-950/40 px-1.5 py-0.5 rounded border border-blue-900/40">0</span>
+                            <div class="flex justify-between items-center text-xs text-zinc-300 mb-1.5">
+                                <span class="flex items-center gap-1.5"><i data-lucide="arrow-left-to-line" class="w-3.5 h-3.5 text-zinc-500"></i> Отступ слева (X)</span>
+                                <input type="number" id="num_margin_left" min="10" max="350" value="75" class="w-14 bg-[#0a0a0d] border border-zinc-800 rounded-lg px-2 py-0.5 text-xs text-zinc-200 font-mono text-center font-bold">
                             </div>
-                            <input type="range" id="random_size" min="0" max="8" value="0" class="w-full cursor-pointer h-1.5 bg-slate-800 rounded-lg appearance-none">
+                            <input type="range" id="margin_left" min="10" max="350" value="75" class="w-full">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between items-center text-xs text-zinc-300 mb-1.5">
+                                <span class="flex items-center gap-1.5"><i data-lucide="arrow-right-to-line" class="w-3.5 h-3.5 text-zinc-500"></i> Правая граница (макс X)</span>
+                                <input type="number" id="num_text_width_limit" min="300" max="1000" value="590" class="w-14 bg-[#0a0a0d] border border-zinc-800 rounded-lg px-2 py-0.5 text-xs text-zinc-200 font-mono text-center font-bold">
+                            </div>
+                            <input type="range" id="text_width_limit" min="300" max="1000" value="590" class="w-full">
+                        </div>
+                    </div>
+
+                    <!-- Even pages margins -->
+                    <div class="bg-[#141418] p-4 rounded-2xl border border-zinc-800/80 shadow-sm space-y-4">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[11px] font-semibold text-zinc-300 uppercase tracking-widest flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-zinc-400"></span> Четные листы (2, 4, 6...)
+                            </span>
+                            <span class="text-[10px] text-zinc-400 bg-zinc-800/80 px-2 py-0.5 rounded border border-zinc-700/60 font-mono">Правая страница</span>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between items-center text-xs text-zinc-300 mb-1.5">
+                                <span class="flex items-center gap-1.5"><i data-lucide="arrow-left-to-line" class="w-3.5 h-3.5 text-zinc-500"></i> Отступ слева (за красную линию)</span>
+                                <input type="number" id="num_margin_right_page" min="50" max="450" value="169" class="w-14 bg-[#0a0a0d] border border-zinc-800 rounded-lg px-2 py-0.5 text-xs text-zinc-200 font-mono text-center font-bold">
+                            </div>
+                            <input type="range" id="margin_right_page" min="50" max="450" value="169" class="w-full">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between items-center text-xs text-zinc-300 mb-1.5">
+                                <span class="flex items-center gap-1.5"><i data-lucide="arrow-right-to-line" class="w-3.5 h-3.5 text-zinc-500"></i> Правая граница (макс X)</span>
+                                <input type="number" id="num_text_width_limit_even" min="300" max="1000" value="730" class="w-14 bg-[#0a0a0d] border border-zinc-800 rounded-lg px-2 py-0.5 text-xs text-zinc-200 font-mono text-center font-bold">
+                            </div>
+                            <input type="range" id="text_width_limit_even" min="300" max="1000" value="730" class="w-full">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. TAB: REALISM AND INK -->
+                <div id="tabRealism" class="space-y-3.5 hidden">
+                    <!-- Curated Luxury Stationery Ink Section -->
+                    <div class="bg-[#141418] p-4 rounded-2xl border border-zinc-800/80 shadow-sm space-y-3">
+                        <label class="text-[11px] font-semibold text-zinc-300 uppercase tracking-widest flex items-center gap-2">
+                            <i data-lucide="droplet" class="w-3.5 h-3.5 text-amber-400"></i> Палитра архивных чернил
+                        </label>
+                        
+                        <!-- Studio Color Swatches -->
+                        <div class="grid grid-cols-3 gap-2">
+                            <button class="ink-btn flex items-center gap-2 p-2 rounded-xl bg-[#0a0a0d] border border-amber-500/80 text-xs text-zinc-200 transition-all cursor-pointer ring-1 ring-amber-500/30" data-color="#1c2e74">
+                                <span class="w-3.5 h-3.5 rounded-full bg-[#1c2e74] border border-white/20 shrink-0"></span>
+                                <span class="truncate">Синяя шарик.</span>
+                            </button>
+                            <button class="ink-btn flex items-center gap-2 p-2 rounded-xl bg-[#0a0a0d] border border-zinc-800 hover:border-zinc-700 text-xs text-zinc-300 transition-all cursor-pointer" data-color="#2a2868">
+                                <span class="w-3.5 h-3.5 rounded-full bg-[#2a2868] border border-white/20 shrink-0"></span>
+                                <span class="truncate">Фиолетовая</span>
+                            </button>
+                            <button class="ink-btn flex items-center gap-2 p-2 rounded-xl bg-[#0a0a0d] border border-zinc-800 hover:border-zinc-700 text-xs text-zinc-300 transition-all cursor-pointer" data-color="#111827">
+                                <span class="w-3.5 h-3.5 rounded-full bg-[#111827] border border-white/20 shrink-0"></span>
+                                <span class="truncate">Черная гель</span>
+                            </button>
+                            <button class="ink-btn flex items-center gap-2 p-2 rounded-xl bg-[#0a0a0d] border border-zinc-800 hover:border-zinc-700 text-xs text-zinc-300 transition-all cursor-pointer" data-color="#475569">
+                                <span class="w-3.5 h-3.5 rounded-full bg-[#475569] border border-white/20 shrink-0"></span>
+                                <span class="truncate">Карандаш 2B</span>
+                            </button>
+                            <button class="ink-btn flex items-center gap-2 p-2 rounded-xl bg-[#0a0a0d] border border-zinc-800 hover:border-zinc-700 text-xs text-zinc-300 transition-all cursor-pointer" data-color="#881337">
+                                <span class="w-3.5 h-3.5 rounded-full bg-[#881337] border border-white/20 shrink-0"></span>
+                                <span class="truncate">Бордовая</span>
+                            </button>
+                            <button class="ink-btn flex items-center gap-2 p-2 rounded-xl bg-[#0a0a0d] border border-zinc-800 hover:border-zinc-700 text-xs text-zinc-300 transition-all cursor-pointer" data-color="#14532d">
+                                <span class="w-3.5 h-3.5 rounded-full bg-[#14532d] border border-white/20 shrink-0"></span>
+                                <span class="truncate">Хвойная</span>
+                            </button>
+                        </div>
+
+                        <!-- Custom Hex Picker -->
+                        <div class="flex items-center gap-2.5 pt-1.5">
+                            <input type="color" id="inkColorPicker" value="#1c2e74" class="w-7 h-7 rounded-lg bg-transparent border-0 cursor-pointer">
+                            <span class="text-xs text-zinc-400">Произвольный оттенок чернил</span>
+                            <span id="inkHexDisplay" class="ml-auto text-xs font-mono text-zinc-300">#1c2e74</span>
+                        </div>
+                    </div>
+
+                    <!-- Handwriting Micro-Fluctuations -->
+                    <div class="bg-[#141418] p-4 rounded-2xl border border-zinc-800/80 shadow-sm space-y-4">
+                        <label class="text-[11px] font-semibold text-zinc-300 uppercase tracking-widest flex items-center gap-2">
+                            <i data-lucide="activity" class="w-3.5 h-3.5 text-amber-400"></i> «Живая рука» и микроколебания
+                        </label>
+
+                        <!-- Baseline Jitter (Дрожание строки) -->
+                        <div>
+                            <div class="flex justify-between items-center text-xs text-zinc-300 mb-1.5">
+                                <span class="flex items-center gap-1.5" title="Буквы слегка пляшут по высоте, как при реальном письме">
+                                    <i data-lucide="waves" class="w-3.5 h-3.5 text-zinc-500"></i> Дрожание строки (Baseline)
+                                </span>
+                                <input type="number" id="num_baseline_jitter" min="0" max="6" step="0.5" value="1.5" class="w-14 bg-[#0a0a0d] border border-zinc-800 rounded-lg px-2 py-0.5 text-xs text-zinc-200 font-mono text-center font-bold">
+                            </div>
+                            <input type="range" id="baseline_jitter" min="0" max="6" step="0.5" value="1.5" class="w-full">
+                        </div>
+
+                        <!-- Micro Slant / Letter Tilt Jitter -->
+                        <div>
+                            <div class="flex justify-between items-center text-xs text-zinc-300 mb-1.5">
+                                <span class="flex items-center gap-1.5" title="Каждая буква слегка меняет угол наклона">
+                                    <i data-lucide="italic" class="w-3.5 h-3.5 text-zinc-500"></i> Микронаклон букв (°)
+                                </span>
+                                <input type="number" id="num_slant_jitter" min="0" max="5" step="0.5" value="1" class="w-14 bg-[#0a0a0d] border border-zinc-800 rounded-lg px-2 py-0.5 text-xs text-zinc-200 font-mono text-center font-bold">
+                            </div>
+                            <input type="range" id="slant_jitter" min="0" max="5" step="0.5" value="1" class="w-full">
+                        </div>
+
+                        <!-- Random Letter Size -->
+                        <div>
+                            <div class="flex justify-between items-center text-xs text-zinc-300 mb-1.5">
+                                <span class="flex items-center gap-1.5" title="Случайная разница в величине отдельных букв">
+                                    <i data-lucide="shuffle" class="w-3.5 h-3.5 text-zinc-500"></i> Хаос размера букв (px)
+                                </span>
+                                <input type="number" id="num_random_size" min="0" max="8" value="2" class="w-14 bg-[#0a0a0d] border border-zinc-800 rounded-lg px-2 py-0.5 text-xs text-zinc-200 font-mono text-center font-bold">
+                            </div>
+                            <input type="range" id="random_size" min="0" max="8" value="2" class="w-full">
+                        </div>
+
+                        <!-- Global Text Tilt (Наклон всего блока) -->
+                        <div>
+                            <div class="flex justify-between items-center text-xs text-zinc-300 mb-1.5">
+                                <span class="flex items-center gap-1.5" title="Наклон всей тетради под углом">
+                                    <i data-lucide="rotate-cw" class="w-3.5 h-3.5 text-zinc-500"></i> Общий наклон тетради (°)
+                                </span>
+                                <input type="number" id="num_text_rotate" min="-6" max="6" step="0.2" value="0.2" class="w-14 bg-[#0a0a0d] border border-zinc-800 rounded-lg px-2 py-0.5 text-xs text-zinc-200 font-mono text-center font-bold">
+                            </div>
+                            <input type="range" id="text_rotate" min="-6" max="6" step="0.2" value="0.2" class="w-full">
+                        </div>
+
+                        <!-- Ink Opacity & Pressure Variation -->
+                        <div>
+                            <div class="flex justify-between items-center text-xs text-zinc-300 mb-1.5">
+                                <span class="flex items-center gap-1.5" title="Имитация подсыхания пасты и разного нажима руки">
+                                    <i data-lucide="feather" class="w-3.5 h-3.5 text-zinc-500"></i> Разброс нажима пера
+                                </span>
+                                <input type="number" id="num_ink_pressure" min="0" max="0.5" step="0.05" value="0.15" class="w-14 bg-[#0a0a0d] border border-zinc-800 rounded-lg px-2 py-0.5 text-xs text-zinc-200 font-mono text-center font-bold">
+                            </div>
+                            <input type="range" id="ink_pressure" min="0" max="0.5" step="0.05" value="0.15" class="w-full">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. TAB: PRESETS AND FONTS -->
+                <div id="tabPresets" class="space-y-3.5 hidden">
+                    <!-- Presets Selector -->
+                    <div class="bg-[#141418] p-4 rounded-2xl border border-zinc-800/80 shadow-sm space-y-3">
+                        <label class="text-[11px] font-semibold text-zinc-300 uppercase tracking-widest flex items-center gap-2">
+                            <i data-lucide="bookmark-check" class="w-3.5 h-3.5 text-amber-400"></i> Пресеты оформления
+                        </label>
+                        <p class="text-xs text-zinc-400">
+                            Быстрый выбор стиля под задачу:
+                        </p>
+
+                        <div class="space-y-2" id="presetButtonsList">
+                            <!-- Preset cards dynamically generated -->
+                        </div>
+
+                        <div class="pt-2 border-t border-zinc-800 flex gap-2">
+                            <input type="text" id="newPresetName" placeholder="Имя своего стиля..." class="flex-1 bg-[#0a0a0d] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-amber-500/60">
+                            <button id="btnSavePreset" class="px-3.5 py-2 bg-zinc-200 hover:bg-white text-zinc-950 rounded-xl text-xs font-semibold cursor-pointer transition-colors shadow-sm">
+                                Сохранить
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Fonts Upload & Selector -->
+                    <div class="bg-[#141418] p-4 rounded-2xl border border-zinc-800/80 shadow-sm space-y-3">
+                        <label class="text-[11px] font-semibold text-zinc-300 uppercase tracking-widest flex items-center gap-2">
+                            <i data-lucide="file-font" class="w-3.5 h-3.5 text-amber-400"></i> Рукописные шрифты
+                        </label>
+                        
+                        <!-- Font Dropzone -->
+                        <div id="fontDropzone" class="border border-dashed border-zinc-800 hover:border-amber-500/80 bg-[#0a0a0d] p-3 rounded-xl flex items-center justify-center gap-2 text-xs text-zinc-400 cursor-pointer transition-colors">
+                            <input type="file" id="fontFileInput" accept=".ttf,.otf" class="hidden">
+                            <i data-lucide="upload" class="w-4 h-4 text-amber-400"></i>
+                            <span>Загрузить шрифт (.ttf, .otf)</span>
+                        </div>
+
+                        <!-- Fonts List -->
+                        <div id="fontsList" class="space-y-1.5 max-h-[160px] overflow-y-auto">
+                            <!-- Font options -->
                         </div>
                     </div>
                 </div>
 
             </div>
-        </div>
 
-        <div class="flex-1 p-8 flex flex-col justify-center items-center bg-[#0f111a] overflow-hidden gap-5">
-            
-            <div class="max-h-[calc(100vh-14rem)] max-w-full bg-[#161925] shadow-2xl shadow-black/80 rounded-2xl p-3 flex justify-center items-center overflow-hidden border border-slate-800/60 ring-4 ring-slate-800/10">
-                <canvas id="noteCanvas" class="max-h-[calc(100vh-16rem)] w-auto object-contain rounded-lg shadow-2xl"></canvas>
+            <!-- Sidebar Footer Quick Info -->
+            <div class="p-3 bg-[#0a0a0d] border-t border-zinc-800 text-[11px] text-zinc-500 flex justify-between items-center shrink-0">
+                <span class="font-mono text-[10px] tracking-wider text-zinc-400">HANDWRITER STUDIO</span>
+                <span class="flex items-center gap-1 text-zinc-400">
+                    <kbd class="px-1.5 py-0.5 text-[10px] bg-zinc-800 rounded border border-zinc-700 text-zinc-300 font-mono">Ctrl</kbd>+<kbd class="px-1.5 py-0.5 text-[10px] bg-zinc-800 rounded border border-zinc-700 text-zinc-300 font-mono">Enter</kbd>
+                </span>
+            </div>
+        </aside>
+
+        <!-- Right Main Drafting / Preview Area -->
+        <main class="flex-1 flex flex-col bg-[#070709] overflow-hidden relative">
+
+            <!-- Studio Viewport Toolbar -->
+            <div class="px-6 py-2.5 bg-[#0f0f12]/90 backdrop-blur-md border-b border-zinc-800/80 flex items-center justify-between shrink-0 z-10">
+                <!-- View Mode Segmented Control -->
+                <div class="flex items-center gap-1 bg-[#141418] p-1 rounded-xl border border-zinc-800">
+                    <button id="viewSpreadBtn" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 text-zinc-100 shadow-sm flex items-center gap-1.5 cursor-pointer transition-colors" title="Режим разворота тетради">
+                        <i data-lucide="book-open" class="w-3.5 h-3.5 text-amber-400"></i>
+                        <span>Разворот</span>
+                    </button>
+                    <button id="viewListBtn" class="px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-400 hover:text-zinc-200 flex items-center gap-1.5 cursor-pointer transition-colors" title="Лента страниц в столбик">
+                        <i data-lucide="columns-2" class="w-3.5 h-3.5"></i>
+                        <span>Лента</span>
+                    </button>
+                    <button id="viewGridBtn" class="px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-400 hover:text-zinc-200 flex items-center gap-1.5 cursor-pointer transition-colors" title="Сетка страниц">
+                        <i data-lucide="grid" class="w-3.5 h-3.5"></i>
+                        <span>Сетка</span>
+                    </button>
+                </div>
+
+                <!-- Precision Zoom Controls -->
+                <div class="flex items-center gap-2">
+                    <div class="flex items-center bg-[#141418] rounded-xl border border-zinc-800 p-0.5 text-xs text-zinc-300">
+                        <button id="btnZoomOut" class="p-1.5 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white cursor-pointer" title="Уменьшить">
+                            <i data-lucide="minus" class="w-3.5 h-3.5"></i>
+                        </button>
+                        <span id="zoomLevelDisplay" class="px-2 font-mono font-bold text-zinc-200">100%</span>
+                        <button id="btnZoomIn" class="p-1.5 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white cursor-pointer" title="Увеличить">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                        </button>
+                        <button id="btnZoomFit" class="px-2 py-1 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white cursor-pointer text-[11px] ml-0.5" title="По ширине окна">
+                            Fit
+                        </button>
+                    </div>
+                </div>
             </div>
 
-            <button id="downloadBtn" class="bg-blue-600 hover:bg-blue-500 active:scale-98 text-white font-semibold py-3 px-8 rounded-xl shadow-lg shadow-blue-500/10 hover:shadow-blue-500/20 transition-all cursor-pointer flex items-center gap-2 text-sm tracking-wide border border-blue-500/30">
-                <i data-lucide="download" class="w-4 h-4"></i> Скачать готовый конспект
-            </button>
-        </div>
+            <!-- Canvas Scroll Container (Architectural Drafting Surface) -->
+            <div id="viewportContainer" class="flex-1 overflow-auto p-10 flex flex-col items-center bg-[radial-gradient(#1c1c22_1px,transparent_1px)] [background-size:20px_20px]">
+                <div id="canvasContainer" class="flex flex-col items-center gap-12 transition-transform origin-top duration-150">
+                    <!-- Canvases are rendered here -->
+                </div>
+            </div>
 
+            <!-- Studio Toast Notification -->
+            <div id="toast" class="fixed bottom-6 right-6 bg-[#18181c]/95 border border-zinc-700/80 text-zinc-100 px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 transform translate-y-20 opacity-0 transition-all duration-300 z-50 pointer-events-none backdrop-blur-md">
+                <div id="toastIcon" class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                    <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                </div>
+                <div id="toastMessage" class="text-xs font-medium">Успешно!</div>
+            </div>
+
+        </main>
     </div>
 
     <script>
+        // Initialize Lucide Icons
         lucide.createIcons();
 
-        // Логика переключения табов
-        const tabMainBtn = document.getElementById('tabMainBtn');
-        const tabRandomBtn = document.getElementById('tabRandomBtn');
-        const tabMain = document.getElementById('tabMain');
-        const tabRandom = document.getElementById('tabRandom');
+        // Application State
+        const state = {
+            text: `1) Конспект лекции: Введение в архитектуру систем
+2) Основные принципы построения отказоустойчивых сервисов
+3) Горизонтальное масштабирование и балансировка нагрузки
+4) Тестирование реалистичного почерка:
+- Дрожание строки имитирует живое письмо человека
+- Случайный микронаклон букв убирает машинный эффект
+- Поля и красная строка настроены под тетрадные клетки`,
+            fontSize: 34,
+            lineSpacing: 42,
+            wordSpacing: 10,
+            paragraphIndent: 35,
+            startY: 60,
+            marginLeftOdd: 75,
+            textWidthLimitOdd: 590,
+            marginLeftEven: 169,
+            textWidthLimitEven: 730,
+            textRotate: 0.2,
+            randomSize: 2,
+            baselineJitter: 1.5,
+            slantJitter: 1.0,
+            inkPressure: 0.15,
+            inkColor: '#1c2e74',
+            bgBrightness: 100,
+            bgContrast: 100,
+            mirrorMode: 'mirror',
+            currentTemplateUrl: '/assets/template.png',
+            currentTemplateId: 'template.png',
+            viewMode: 'spread',
+            zoom: 1.0,
+            fontName: 'HandwrittenFont'
+        };
 
-        tabMainBtn.addEventListener('click', () => {
-            tabMain.classList.remove('hidden');
-            tabRandom.classList.add('hidden');
-            tabMainBtn.className = "flex-1 py-3 font-medium border-b-2 border-blue-500 text-blue-400 flex items-center justify-center gap-2 transition-all cursor-pointer bg-[#161925]";
-            tabRandomBtn.className = "flex-1 py-3 font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-200 hover:bg-[#1a1d29] flex items-center justify-center gap-2 transition-all cursor-pointer";
+        let currentBgImage = new Image();
+        currentBgImage.src = state.currentTemplateUrl;
+
+        let debounceTimer = null;
+        let generatedCanvases = [];
+
+        // DOM Elements
+        const textInput = document.getElementById('textInput');
+        const canvasContainer = document.getElementById('canvasContainer');
+        const viewportContainer = document.getElementById('viewportContainer');
+
+        // Presets Definition
+        const DEFAULT_PRESETS = [
+            {
+                name: '📘 Тетрадь в клетку (Классика)',
+                settings: {
+                    fontSize: 34, lineSpacing: 42, wordSpacing: 10, paragraphIndent: 35, startY: 60,
+                    marginLeftOdd: 75, textWidthLimitOdd: 590, marginLeftEven: 169, textWidthLimitEven: 730,
+                    textRotate: 0.2, randomSize: 2, baselineJitter: 1.5, slantJitter: 1.0, inkPressure: 0.15,
+                    inkColor: '#1c2e74', currentTemplateId: 'template.png', currentTemplateUrl: '/assets/template.png'
+                }
+            },
+            {
+                name: '📝 Плотный конспект лекции',
+                settings: {
+                    fontSize: 27, lineSpacing: 35, wordSpacing: 8, paragraphIndent: 25, startY: 45,
+                    marginLeftOdd: 65, textWidthLimitOdd: 610, marginLeftEven: 155, textWidthLimitEven: 740,
+                    textRotate: 0.0, randomSize: 1, baselineJitter: 1.0, slantJitter: 0.8, inkPressure: 0.10,
+                    inkColor: '#2a2868', currentTemplateId: 'template.png', currentTemplateUrl: '/assets/template.png'
+                }
+            },
+            {
+                name: '🏃 Беглый почерк (Студент)',
+                settings: {
+                    fontSize: 37, lineSpacing: 46, wordSpacing: 12, paragraphIndent: 45, startY: 65,
+                    marginLeftOdd: 78, textWidthLimitOdd: 585, marginLeftEven: 172, textWidthLimitEven: 725,
+                    textRotate: 0.8, randomSize: 4, baselineJitter: 2.5, slantJitter: 2.0, inkPressure: 0.25,
+                    inkColor: '#1c2e74', currentTemplateId: 'template.png', currentTemplateUrl: '/assets/template.png'
+                }
+            },
+            {
+                name: '✏️ Графитовый карандаш 2B',
+                settings: {
+                    fontSize: 33, lineSpacing: 42, wordSpacing: 10, paragraphIndent: 30, startY: 60,
+                    marginLeftOdd: 75, textWidthLimitOdd: 590, marginLeftEven: 169, textWidthLimitEven: 730,
+                    textRotate: -0.2, randomSize: 2, baselineJitter: 1.2, slantJitter: 1.0, inkPressure: 0.30,
+                    inkColor: '#475569', currentTemplateId: 'template.png', currentTemplateUrl: '/assets/template.png'
+                }
+            }
+        ];
+
+        // Toast Helper
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            const toastIcon = document.getElementById('toastIcon');
+
+            toastMessage.innerText = message;
+            if (isError) {
+                toastIcon.className = "w-6 h-6 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center shrink-0";
+                toastIcon.innerHTML = `<i data-lucide="alert-circle" class="w-3.5 h-3.5"></i>`;
+            } else {
+                toastIcon.className = "w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0";
+                toastIcon.innerHTML = `<i data-lucide="check" class="w-3.5 h-3.5"></i>`;
+            }
+            lucide.createIcons();
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 2800);
+        }
+
+        // Tab Navigation
+        const tabs = [
+            { btn: 'tabBtnText', tab: 'tabText' },
+            { btn: 'tabBtnPaper', tab: 'tabPaper' },
+            { btn: 'tabBtnGeometry', tab: 'tabGeometry' },
+            { btn: 'tabBtnRealism', tab: 'tabRealism' },
+            { btn: 'tabBtnPresets', tab: 'tabPresets' },
+        ];
+
+        tabs.forEach(({ btn, tab }) => {
+            const btnEl = document.getElementById(btn);
+            btnEl.addEventListener('click', () => {
+                tabs.forEach(t => {
+                    document.getElementById(t.tab).classList.add('hidden');
+                    const b = document.getElementById(t.btn);
+                    b.className = "flex-1 py-3 px-2 flex items-center justify-center gap-1.5 border-b-2 border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-[#121215] transition-all cursor-pointer";
+                });
+                document.getElementById(tab).classList.remove('hidden');
+                btnEl.className = "flex-1 py-3 px-2 flex items-center justify-center gap-1.5 border-b-2 border-amber-500 text-zinc-100 bg-[#131317] transition-all cursor-pointer";
+            });
         });
 
-        tabRandomBtn.addEventListener('click', () => {
-            tabRandom.classList.remove('hidden');
-            tabMain.classList.add('hidden');
-            tabRandomBtn.className = "flex-1 py-3 font-medium border-b-2 border-blue-500 text-blue-400 flex items-center justify-center gap-2 transition-all cursor-pointer bg-[#161925]";
-            tabMainBtn.className = "flex-1 py-3 font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-200 hover:bg-[#1a1d29] flex items-center justify-center gap-2 transition-all cursor-pointer";
-        });
-
-        // Логика рендеринга на Canvas
-        const canvas = document.getElementById('noteCanvas');
-        const ctx = canvas.getContext('2d');
-        const inputs = ['textInput', 'font_size', 'line_spacing', 'word_spacing', 'margin_left', 'start_y', 'text_rotate', 'random_size'];
-        
-        const bgImage = new Image();
-        bgImage.src = '/assets/template.png';
-
+        // Seeded Pseudo-Random Number Generator
         function seededRandom(seed) {
-            const x = Math.sin(seed++) * 10000;
+            const x = Math.sin(seed) * 10000;
             return x - Math.floor(x);
         }
 
-        function wrapText(text, maxWidth, wordSpacing, fontSize, fontName) {
-            const paragraphs = text.split('\n');
-            const lines = [];
-            ctx.font = `${fontSize}px "${fontName}"`;
+        // Synchronize Slider and Number Inputs
+        function bindSliderAndNumber(sliderId, numberId, stateKey, isFloat = false) {
+            const slider = document.getElementById(sliderId);
+            const number = document.getElementById(numberId);
+            if (!slider || !number) return;
 
-            paragraphs.forEach(paragraph => {
+            slider.addEventListener('input', () => {
+                const val = isFloat ? parseFloat(slider.value) : parseInt(slider.value);
+                number.value = val;
+                state[stateKey] = val;
+                triggerRedraw();
+            });
+
+            number.addEventListener('input', () => {
+                let val = isFloat ? parseFloat(number.value) : parseInt(number.value);
+                if (isNaN(val)) return;
+                slider.value = val;
+                state[stateKey] = val;
+                triggerRedraw();
+            });
+        }
+
+        bindSliderAndNumber('font_size', 'num_font_size', 'fontSize');
+        bindSliderAndNumber('line_spacing', 'num_line_spacing', 'lineSpacing');
+        bindSliderAndNumber('word_spacing', 'num_word_spacing', 'wordSpacing');
+        bindSliderAndNumber('paragraph_indent', 'num_paragraph_indent', 'paragraphIndent');
+        bindSliderAndNumber('start_y', 'num_start_y', 'startY');
+        bindSliderAndNumber('margin_left', 'num_margin_left', 'marginLeftOdd');
+        bindSliderAndNumber('text_width_limit', 'num_text_width_limit', 'textWidthLimitOdd');
+        bindSliderAndNumber('margin_right_page', 'num_margin_right_page', 'marginLeftEven');
+        bindSliderAndNumber('text_width_limit_even', 'num_text_width_limit_even', 'textWidthLimitEven');
+        bindSliderAndNumber('baseline_jitter', 'num_baseline_jitter', 'baselineJitter', true);
+        bindSliderAndNumber('slant_jitter', 'num_slant_jitter', 'slantJitter', true);
+        bindSliderAndNumber('random_size', 'num_random_size', 'randomSize');
+        bindSliderAndNumber('text_rotate', 'num_text_rotate', 'textRotate', true);
+        bindSliderAndNumber('ink_pressure', 'num_ink_pressure', 'inkPressure', true);
+
+        // Background Brightness & Contrast
+        document.getElementById('bg_brightness').addEventListener('input', (e) => {
+            state.bgBrightness = parseInt(e.target.value);
+            document.getElementById('val_bg_brightness').innerText = `${state.bgBrightness}%`;
+            triggerRedraw();
+        });
+        document.getElementById('bg_contrast').addEventListener('input', (e) => {
+            state.bgContrast = parseInt(e.target.value);
+            document.getElementById('val_bg_contrast').innerText = `${state.bgContrast}%`;
+            triggerRedraw();
+        });
+
+        // Mirror mode radio inputs
+        document.querySelectorAll('input[name="mirrorMode"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                state.mirrorMode = e.target.value;
+                triggerRedraw();
+            });
+        });
+
+        // Ink Color Presets & Picker
+        const inkBtns = document.querySelectorAll('.ink-btn');
+        const inkColorPicker = document.getElementById('inkColorPicker');
+        const inkHexDisplay = document.getElementById('inkHexDisplay');
+
+        function setInkColor(color) {
+            state.inkColor = color;
+            inkColorPicker.value = color;
+            inkHexDisplay.innerText = color;
+
+            inkBtns.forEach(btn => {
+                if (btn.dataset.color.toLowerCase() === color.toLowerCase()) {
+                    btn.className = "ink-btn flex items-center gap-2 p-2 rounded-xl bg-[#0a0a0d] border border-amber-500/80 text-xs text-zinc-100 transition-all cursor-pointer ring-1 ring-amber-500/30";
+                } else {
+                    btn.className = "ink-btn flex items-center gap-2 p-2 rounded-xl bg-[#0a0a0d] border border-zinc-800 hover:border-zinc-700 text-xs text-zinc-300 transition-all cursor-pointer";
+                }
+            });
+            triggerRedraw();
+        }
+
+        inkBtns.forEach(btn => {
+            btn.addEventListener('click', () => setInkColor(btn.dataset.color));
+        });
+
+        inkColorPicker.addEventListener('input', (e) => setInkColor(e.target.value));
+
+        // Text input event
+        textInput.addEventListener('input', () => {
+            state.text = textInput.value;
+            updateStats();
+            triggerRedraw();
+            saveToLocalStorage();
+        });
+
+        // Example text button
+        document.getElementById('btnSampleText').addEventListener('click', () => {
+            textInput.value = `Тема 14: Параллельные вычисления и многопоточность
+
+1. Процессы и потоки:
+Поток (thread) — наименьшая единица обработки, исполнение которой может быть назначено ядром ОС. В отличие от тяжеловесных процессов, потоки одного процесса разделяют общее адресное пространство памяти.
+
+2. Состояние гонки (Race Condition):
+Возникает, когда несколько потоков одновременно обращаются к общему ресурсу, и результат зависит от порядка выполнения.
+Для предотвращения используются:
+- Мьютексы (Mutex / Lock)
+- Семафоры (Semaphores)
+- Атомарные операции (Atomic CAS)
+
+3. Закон Амдала:
+Ограничивает максимальный прирост производительности системы при увеличении числа ядер. Ускорение зависит от доли последовательного кода:
+S(N) = 1 / ((1 - P) + P/N)
+
+Вывод: Оптимизация многопоточных алгоритмов требует минимизации критических секций.`;
+            state.text = textInput.value;
+            updateStats();
+            triggerRedraw();
+            showToast('Вставлен пример лекции');
+        });
+
+        // Clear text button
+        document.getElementById('btnClearText').addEventListener('click', () => {
+            textInput.value = '';
+            state.text = '';
+            updateStats();
+            triggerRedraw();
+        });
+
+        // Reset all settings button
+        document.getElementById('btnResetAll').addEventListener('click', () => {
+            if (confirm('Сбросить все настройки к начальным?')) {
+                applyPreset(DEFAULT_PRESETS[0]);
+                showToast('Настройки сброшены');
+            }
+        });
+
+        // Update Statistics Counters
+        function updateStats() {
+            const text = state.text || '';
+            const chars = text.length;
+            const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+            document.getElementById('statChars').innerText = chars;
+            document.getElementById('statWords').innerText = words;
+            document.getElementById('charCounter').innerText = `${chars} знаков`;
+        }
+
+        // Debounced Redraw trigger
+        function triggerRedraw() {
+            if (debounceTimer) clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                draw();
+            }, 40);
+        }
+
+        // View Mode Switcher
+        const viewSpreadBtn = document.getElementById('viewSpreadBtn');
+        const viewListBtn = document.getElementById('viewListBtn');
+        const viewGridBtn = document.getElementById('viewGridBtn');
+
+        function setViewMode(mode) {
+            state.viewMode = mode;
+            [viewSpreadBtn, viewListBtn, viewGridBtn].forEach(btn => {
+                btn.className = "px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-400 hover:text-zinc-200 flex items-center gap-1.5 cursor-pointer transition-colors";
+            });
+
+            if (mode === 'spread') {
+                viewSpreadBtn.className = "px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 text-zinc-100 shadow-sm flex items-center gap-1.5 cursor-pointer transition-colors";
+            } else if (mode === 'list') {
+                viewListBtn.className = "px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 text-zinc-100 shadow-sm flex items-center gap-1.5 cursor-pointer transition-colors";
+            } else if (mode === 'grid') {
+                viewGridBtn.className = "px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 text-zinc-100 shadow-sm flex items-center gap-1.5 cursor-pointer transition-colors";
+            }
+            renderViewLayout();
+        }
+
+        viewSpreadBtn.addEventListener('click', () => setViewMode('spread'));
+        viewListBtn.addEventListener('click', () => setViewMode('list'));
+        viewGridBtn.addEventListener('click', () => setViewMode('grid'));
+
+        // Zoom Controls
+        const zoomDisplay = document.getElementById('zoomLevelDisplay');
+        document.getElementById('btnZoomIn').addEventListener('click', () => {
+            state.zoom = Math.min(2.0, state.zoom + 0.15);
+            applyZoom();
+        });
+        document.getElementById('btnZoomOut').addEventListener('click', () => {
+            state.zoom = Math.max(0.4, state.zoom - 0.15);
+            applyZoom();
+        });
+        document.getElementById('btnZoomFit').addEventListener('click', () => {
+            const containerWidth = viewportContainer.clientWidth - 80;
+            const singlePageWidth = currentBgImage.width || 744;
+            const targetWidth = state.viewMode === 'spread' ? singlePageWidth * 2 + 40 : singlePageWidth;
+            state.zoom = Math.min(1.2, Math.max(0.4, containerWidth / targetWidth));
+            applyZoom();
+        });
+
+        function applyZoom() {
+            zoomDisplay.innerText = `${Math.round(state.zoom * 100)}%`;
+            canvasContainer.style.transform = `scale(${state.zoom})`;
+        }
+
+        // ==========================================
+        // TEXT WRAPPING AND PAGINATION ENGINE
+        // ==========================================
+        function wrapText(ctx, text, state, bgHeight) {
+            const paragraphs = text.split('\n');
+            const linesData = [];
+            ctx.font = `${state.fontSize}px "${state.fontName}"`;
+
+            let currentPageIndex = 1;
+            let currentY = state.startY;
+            const lineSpacing = state.lineSpacing;
+            const pageMaxHeight = bgHeight - 70;
+
+            paragraphs.forEach((paragraph) => {
                 if (paragraph.trim() === '') {
-                    lines.push([]);
+                    if (currentY + lineSpacing > pageMaxHeight) {
+                        currentPageIndex++;
+                        currentY = state.startY;
+                    }
+                    linesData.push({ words: [], page: currentPageIndex, isFirstLine: false });
+                    currentY += lineSpacing;
                     return;
                 }
+
                 const words = paragraph.split(' ');
                 let currentLineWords = [];
-                let currentWidth = 0;
+                let isFirstLineOfParagraph = true;
+
+                let startX = (currentPageIndex % 2 === 0) ? state.marginLeftEven : state.marginLeftOdd;
+                let currentX = startX + (isFirstLineOfParagraph ? state.paragraphIndent : 0);
 
                 words.forEach(word => {
                     const wordWidth = ctx.measureText(word).width;
-                    const addedWidth = currentLineWords.length > 0 ? wordWidth + wordSpacing : wordWidth;
+                    const spaceWidth = currentLineWords.length > 0 ? state.wordSpacing : 0;
+                    const maxX = (currentPageIndex % 2 === 0) ? state.textWidthLimitEven : state.textWidthLimitOdd;
 
-                    if (currentWidth + addedWidth <= maxWidth) {
-                        currentLineWords.push(word);
-                        currentWidth += addedWidth;
-                    } else {
-                        lines.push(currentLineWords);
-                        currentLineWords = [word];
-                        currentWidth = wordWidth;
+                    if (currentX + spaceWidth + wordWidth > maxX && currentLineWords.length > 0) {
+                        linesData.push({
+                            words: currentLineWords,
+                            page: currentPageIndex,
+                            isFirstLine: isFirstLineOfParagraph
+                        });
+                        isFirstLineOfParagraph = false;
+                        currentY += lineSpacing;
+
+                        if (currentY + lineSpacing > pageMaxHeight) {
+                            currentPageIndex++;
+                            currentY = state.startY;
+                        }
+
+                        startX = (currentPageIndex % 2 === 0) ? state.marginLeftEven : state.marginLeftOdd;
+                        currentX = startX;
+                        currentLineWords = [];
                     }
+
+                    currentLineWords.push(word);
+                    currentX += (currentLineWords.length > 1 ? state.wordSpacing : 0) + wordWidth;
                 });
-                if (currentLineWords.length > 0) lines.push(currentLineWords);
+
+                if (currentLineWords.length > 0) {
+                    linesData.push({
+                        words: currentLineWords,
+                        page: currentPageIndex,
+                        isFirstLine: isFirstLineOfParagraph
+                    });
+                    currentY += lineSpacing;
+                    if (currentY + lineSpacing > pageMaxHeight) {
+                        currentPageIndex++;
+                        currentY = state.startY;
+                    }
+                }
             });
-            return lines;
+
+            return { linesData, totalPages: Math.max(1, currentPageIndex) };
         }
 
+        // ==========================================
+        // MAIN CANVAS RENDERER
+        // ==========================================
         function draw() {
-            if (!bgImage.complete) return;
+            if (!currentBgImage.complete || currentBgImage.naturalWidth === 0) return;
 
-            const fontSize = parseInt(document.getElementById('font_size').value);
-            const lineSpacing = parseInt(document.getElementById('line_spacing').value);
-            const wordSpacing = parseInt(document.getElementById('word_spacing').value);
-            const marginLeft = parseInt(document.getElementById('margin_left').value);
-            const startY = parseInt(document.getElementById('start_y').value);
-            const textRotate = parseFloat(document.getElementById('text_rotate').value);
-            const randomSize = parseInt(document.getElementById('random_size').value);
-            const text = document.getElementById('textInput').value;
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
 
-            // Обновляем индикаторы
-            document.getElementById('val_font_size').innerText = fontSize;
-            document.getElementById('val_line_spacing').innerText = lineSpacing;
-            document.getElementById('val_word_spacing').innerText = wordSpacing;
-            document.getElementById('val_margin_left').innerText = marginLeft;
-            document.getElementById('val_start_y').innerText = startY;
-            document.getElementById('val_text_rotate').innerText = textRotate;
-            document.getElementById('val_random_size').innerText = randomSize;
+            const { linesData, totalPages } = wrapText(tempCtx, state.text, state, currentBgImage.height);
+            document.getElementById('statPages').innerText = totalPages;
 
-            if (canvas.width !== bgImage.width) {
-                canvas.width = bgImage.width;
-                canvas.height = bgImage.height;
+            generatedCanvases = [];
+
+            for (let p = 1; p <= totalPages; p++) {
+                const canvas = document.createElement('canvas');
+                canvas.width = currentBgImage.width;
+                canvas.height = currentBgImage.height;
+                const pCtx = canvas.getContext('2d');
+
+                // 1. Draw Background Paper with lighting adjustment
+                pCtx.save();
+                pCtx.filter = `brightness(${state.bgBrightness}%) contrast(${state.bgContrast}%)`;
+
+                if (p % 2 === 0 && state.mirrorMode === 'mirror') {
+                    pCtx.translate(currentBgImage.width, 0);
+                    pCtx.scale(-1, 1);
+                }
+                pCtx.drawImage(currentBgImage, 0, 0);
+                pCtx.restore();
+
+                // 2. Setup text rendering context
+                pCtx.fillStyle = state.inkColor;
+                pCtx.textBaseline = "top";
+
+                generatedCanvases.push(canvas);
             }
 
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(bgImage, 0, 0);
+            // 3. Render Hand-Written Text onto the canvases
+            let seed = 42;
+            let pageLineCounters = {};
 
-            ctx.fillStyle = "#1c2e74"; // Цвет чернил
-            ctx.textBaseline = "top";
+            linesData.forEach(line => {
+                const p = line.page;
+                const pCtx = generatedCanvases[p - 1].getContext('2d');
+                const isEven = p % 2 === 0;
 
-            const maxWidth = canvas.width - marginLeft - 60;
-            const lines = wrapText(text, maxWidth, wordSpacing, fontSize, 'HandwrittenFont');
+                if (!pageLineCounters[p]) pageLineCounters[p] = 0;
+                let currentY = state.startY + (pageLineCounters[p] * state.lineSpacing);
+                pageLineCounters[p]++;
 
-            let currentY = startY;
-            let charSeed = 0;
+                let startX = isEven ? state.marginLeftEven : state.marginLeftOdd;
+                if (line.isFirstLine) {
+                    startX += state.paragraphIndent;
+                }
+                let currentX = startX;
 
-            if (textRotate !== 0) {
-                ctx.save();
-                ctx.translate(marginLeft, startY);
-                ctx.rotate((textRotate * Math.PI) / 180);
-                ctx.translate(-marginLeft, -startY);
-            }
+                // Global Text Rotation per line
+                if (state.textRotate !== 0) {
+                    pCtx.save();
+                    pCtx.translate(currentX, currentY);
+                    pCtx.rotate((state.textRotate * Math.PI) / 180);
+                    pCtx.translate(-currentX, -currentY);
+                }
 
-            for (let i = 0; i < lines.length; i++) {
-                if (currentY + lineSpacing > canvas.height - 50) break;
-                
-                let currentX = marginLeft;
-                const words = lines[i];
-
-                words.forEach((word, wordIdx) => {
+                line.words.forEach((word, wordIdx) => {
                     if (wordIdx > 0) {
-                        currentX += wordSpacing;
+                        currentX += state.wordSpacing;
                     }
+
+                    // Word-level subtle baseline wobble
+                    const wordYDrift = (seededRandom(seed++) - 0.5) * (state.baselineJitter * 0.4);
 
                     for (let j = 0; j < word.length; j++) {
                         const char = word[j];
-                        charSeed++;
-                        
+                        seed++;
+
+                        // Letter-level size randomization
                         let sizeOffset = 0;
-                        if (randomSize > 0) {
-                            sizeOffset = (seededRandom(charSeed) * randomSize) - (randomSize / 2);
+                        if (state.randomSize > 0) {
+                            sizeOffset = (seededRandom(seed * 7) - 0.5) * state.randomSize;
+                        }
+                        const finalFontSize = Math.max(8, state.fontSize + sizeOffset);
+                        pCtx.font = `${finalFontSize}px "${state.fontName}"`;
+
+                        // Baseline jitter (vertical wobble)
+                        let charYOffset = wordYDrift;
+                        if (state.baselineJitter > 0) {
+                            charYOffset += (seededRandom(seed * 13) - 0.5) * state.baselineJitter;
                         }
 
-                        const finalFontSize = fontSize + sizeOffset;
-                        ctx.font = `${finalFontSize}px "HandwrittenFont"`;
-                        
-                        ctx.fillText(char, currentX, currentY);
-                        currentX += ctx.measureText(char).width;
+                        // Micro-slant / individual letter rotation
+                        let charSlant = 0;
+                        if (state.slantJitter > 0) {
+                            charSlant = (seededRandom(seed * 19) - 0.5) * state.slantJitter * (Math.PI / 180);
+                        }
+
+                        // Ink pressure and flow variation (alpha opacity)
+                        let alpha = 1.0;
+                        if (state.inkPressure > 0) {
+                            alpha = 1.0 - (seededRandom(seed * 23) * state.inkPressure);
+                        }
+                        pCtx.globalAlpha = Math.max(0.45, Math.min(1.0, alpha));
+
+                        // Render character
+                        if (charSlant !== 0) {
+                            pCtx.save();
+                            pCtx.translate(currentX, currentY + charYOffset);
+                            pCtx.rotate(charSlant);
+                            pCtx.fillText(char, 0, 0);
+                            pCtx.restore();
+                        } else {
+                            pCtx.fillText(char, currentX, currentY + charYOffset);
+                        }
+
+                        // Advance X
+                        currentX += pCtx.measureText(char).width;
                     }
                 });
 
-                currentY += lineSpacing;
+                if (state.textRotate !== 0) {
+                    pCtx.restore();
+                }
+            });
+
+            renderViewLayout();
+        }
+
+        // ==========================================
+        // VIEW LAYOUT RENDERER (SPREAD / LIST / GRID)
+        // ==========================================
+        function renderViewLayout() {
+            canvasContainer.innerHTML = '';
+            const total = generatedCanvases.length;
+
+            if (state.viewMode === 'spread') {
+                // SPREAD VIEW: High-end notebook spread
+                canvasContainer.className = "flex flex-col items-center gap-12 transition-transform origin-top duration-150";
+
+                if (total === 1) {
+                    // Single page: clean, centered, no spine line, no empty boxes
+                    const singleWrapper = document.createElement('div');
+                    singleWrapper.className = "flex items-center justify-center bg-[#121216] p-4 rounded-3xl border border-zinc-800/80 shadow-[0_30px_70px_-15px_rgba(0,0,0,0.85)]";
+                    singleWrapper.appendChild(createPageCard(1, generatedCanvases[0]));
+                    canvasContainer.appendChild(singleWrapper);
+                } else {
+                    for (let i = 0; i < total; i += 2) {
+                        const p1 = i + 1;
+                        const p2 = i + 2;
+
+                        const spreadWrapper = document.createElement('div');
+                        spreadWrapper.className = "flex items-center justify-center gap-0 bg-[#121216] p-4 rounded-3xl border border-zinc-800/80 shadow-[0_30px_70px_-15px_rgba(0,0,0,0.85)] relative";
+
+                        spreadWrapper.appendChild(createPageCard(p1, generatedCanvases[p1 - 1]));
+
+                        if (p2 <= total) {
+                            // Subtle spine shadow placed physically between the two real pages
+                            const spine = document.createElement('div');
+                            spine.className = "w-4 self-stretch my-6 bg-gradient-to-r from-black/20 via-black/80 to-black/20 rounded-full shrink-0 z-10 pointer-events-none -mx-2 blur-[0.5px]";
+                            spreadWrapper.appendChild(spine);
+                            spreadWrapper.appendChild(createPageCard(p2, generatedCanvases[p2 - 1]));
+                        }
+
+                        canvasContainer.appendChild(spreadWrapper);
+                    }
+                }
+            } else if (state.viewMode === 'list') {
+                // LIST VIEW: Stacked
+                canvasContainer.className = "flex flex-col items-center gap-10 transition-transform origin-top duration-150";
+                generatedCanvases.forEach((canvas, index) => {
+                    const card = createPageCard(index + 1, canvas);
+                    canvasContainer.appendChild(card);
+                });
+            } else if (state.viewMode === 'grid') {
+                // GRID VIEW: Architecture layout
+                canvasContainer.className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 transition-transform origin-top duration-150";
+                generatedCanvases.forEach((canvas, index) => {
+                    const card = createPageCard(index + 1, canvas);
+                    canvasContainer.appendChild(card);
+                });
             }
 
-            if (textRotate !== 0) {
-                ctx.restore();
+            lucide.createIcons();
+            applyZoom();
+        }
+
+        // Create Page Card Component with Studio Precision
+        function createPageCard(pageNum, canvas) {
+            const wrapper = document.createElement('div');
+            wrapper.className = "flex flex-col items-center gap-3 shrink-0 group relative";
+
+            const canvasBox = document.createElement('div');
+            canvasBox.className = "max-h-[calc(100vh-14rem)] max-w-full bg-[#121216] shadow-2xl rounded-2xl p-2.5 flex justify-center items-center overflow-hidden border border-zinc-800/80 ring-1 ring-white/5 relative transition-all hover:border-zinc-700";
+
+            // Page Badge
+            const badge = document.createElement('div');
+            badge.className = "absolute top-4 left-4 bg-black/85 text-zinc-300 text-[10px] font-mono px-2.5 py-1 rounded-md backdrop-blur-md border border-zinc-800 shadow-md flex items-center gap-1.5 z-10";
+            badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> Лист ${pageNum} ${pageNum % 2 === 0 ? '(Чётный)' : '(Нечётный)'}`;
+            canvasBox.appendChild(badge);
+
+            canvas.className = "max-h-[calc(100vh-17rem)] w-auto object-contain rounded-xl shadow-lg transition-all";
+            canvasBox.appendChild(canvas);
+            wrapper.appendChild(canvasBox);
+
+            // Card Bottom Actions Bar
+            const actionsBar = document.createElement('div');
+            actionsBar.className = "flex items-center gap-2";
+
+            // Copy to Clipboard Button
+            const copyBtn = document.createElement('button');
+            copyBtn.className = "px-3 py-1.5 bg-[#141418] hover:bg-[#1c1c22] text-zinc-300 hover:text-white rounded-xl text-xs font-medium flex items-center gap-1.5 border border-zinc-800 transition-colors cursor-pointer shadow-sm";
+            copyBtn.innerHTML = `<i data-lucide="copy" class="w-3.5 h-3.5 text-zinc-400"></i> Скопировать`;
+            copyBtn.title = "Скопировать лист в буфер обмена";
+            copyBtn.addEventListener('click', () => {
+                canvas.toBlob(blob => {
+                    if (!blob) {
+                        showToast('Не удалось скопировать', true);
+                        return;
+                    }
+                    try {
+                        navigator.clipboard.write([
+                            new ClipboardItem({ 'image/png': blob })
+                        ]).then(() => {
+                            showToast(`Лист ${pageNum} скопирован в буфер!`);
+                        }).catch(err => {
+                            showToast('Буфер обмена недоступен в этом браузере', true);
+                        });
+                    } catch (e) {
+                        showToast('Ошибка при копировании', true);
+                    }
+                }, 'image/png');
+            });
+
+            // Download PNG Button
+            const dlBtn = document.createElement('button');
+            dlBtn.className = "px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-xl text-xs font-medium flex items-center gap-1.5 border border-zinc-700/60 transition-colors cursor-pointer shadow-sm";
+            dlBtn.innerHTML = `<i data-lucide="download" class="w-3.5 h-3.5 text-zinc-300"></i> PNG`;
+            dlBtn.title = "Скачать этот лист в высоком качестве";
+            dlBtn.addEventListener('click', () => {
+                const link = document.createElement('a');
+                link.download = `handwritten_page_${pageNum}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                showToast(`Лист ${pageNum} скачивается...`);
+            });
+
+            actionsBar.appendChild(copyBtn);
+            actionsBar.appendChild(dlBtn);
+            wrapper.appendChild(actionsBar);
+
+            return wrapper;
+        }
+
+        // ==========================================
+        // TEMPLATES & CUSTOM BACKGROUNDS UPLOAD
+        // ==========================================
+        const sheetFileInput = document.getElementById('sheetFileInput');
+        const dropzone = document.getElementById('dropzone');
+        const templatesGrid = document.getElementById('templatesGrid');
+
+        dropzone.addEventListener('click', () => sheetFileInput.click());
+
+        ['dragenter', 'dragover'].forEach(evt => {
+            dropzone.addEventListener(evt, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropzone.classList.add('dropzone-active');
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(evt => {
+            dropzone.addEventListener(evt, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropzone.classList.remove('dropzone-active');
+            });
+        });
+
+        dropzone.addEventListener('drop', (e) => {
+            const files = e.dataTransfer.files;
+            if (files && files.length > 0) {
+                handleTemplateUpload(files[0]);
+            }
+        });
+
+        sheetFileInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files.length > 0) {
+                handleTemplateUpload(e.target.files[0]);
+            }
+        });
+
+        function handleTemplateUpload(file) {
+            if (!file.type.startsWith('image/')) {
+                showToast('Пожалуйста, выберите файл изображения (PNG, JPG, WEBP)', true);
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                const newImg = new Image();
+                newImg.onload = () => {
+                    currentBgImage = newImg;
+                    state.currentTemplateUrl = evt.target.result;
+                    state.currentTemplateId = file.name;
+                    triggerRedraw();
+                    showToast('Фон применен!');
+                };
+                newImg.src = evt.target.result;
+            };
+            reader.readAsDataURL(file);
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            fetch('/api/upload-template', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => {
+                if (!res.ok) throw new Error('Ошибка сервера при загрузке');
+                return res.json();
+            })
+            .then(data => {
+                showToast(`Фон сохранен: "${data.name}"`);
+                loadTemplatesList();
+            })
+            .catch(err => {
+                console.warn('Backend upload note:', err);
+            });
+        }
+
+        // Load Templates List from Backend
+        function loadTemplatesList() {
+            fetch('/api/templates')
+                .then(res => res.json())
+                .then(templates => {
+                    document.getElementById('templatesCount').innerText = `${templates.length} фона`;
+                    templatesGrid.innerHTML = '';
+
+                    templates.forEach(t => {
+                        const card = document.createElement('div');
+                        const isSelected = state.currentTemplateId === t.filename;
+
+                        card.className = `p-2 rounded-xl bg-[#0a0a0d] border ${isSelected ? 'border-amber-500/90 ring-1 ring-amber-500/40' : 'border-zinc-800 hover:border-zinc-700'} flex flex-col gap-1.5 cursor-pointer transition-all group relative overflow-hidden`;
+
+                        card.innerHTML = `
+                            <div class="h-20 w-full rounded-lg bg-zinc-900 overflow-hidden relative border border-zinc-800/80">
+                                <img src="${t.url}" class="w-full h-full object-cover">
+                                ${!t.is_default ? `
+                                    <button class="btn-del-template absolute top-1 right-1 p-1 bg-red-950/80 hover:bg-red-800 text-white rounded-md text-[10px] opacity-0 group-hover:opacity-100 transition-opacity" data-id="${t.filename}" title="Удалить фон">
+                                        <i data-lucide="trash" class="w-3 h-3"></i>
+                                    </button>
+                                ` : ''}
+                            </div>
+                            <span class="text-[11px] font-medium text-zinc-300 truncate" title="${t.name}">${t.name}</span>
+                        `;
+
+                        card.addEventListener('click', (e) => {
+                            if (e.target.closest('.btn-del-template')) return;
+                            selectTemplate(t);
+                        });
+
+                        const delBtn = card.querySelector('.btn-del-template');
+                        if (delBtn) {
+                            delBtn.addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                deleteTemplate(t.filename);
+                            });
+                        }
+
+                        templatesGrid.appendChild(card);
+                    });
+                    lucide.createIcons();
+                })
+                .catch(err => {
+                    console.error('Error fetching templates:', err);
+                });
+        }
+
+        function selectTemplate(t) {
+            state.currentTemplateId = t.filename;
+            state.currentTemplateUrl = t.url;
+            const img = new Image();
+            img.onload = () => {
+                currentBgImage = img;
+                triggerRedraw();
+                loadTemplatesList();
+                showToast(`Выбран фон: ${t.name}`);
+            };
+            img.src = t.url;
+        }
+
+        function deleteTemplate(filename) {
+            if (!confirm(`Удалить фон ${filename}?`)) return;
+            fetch(`/api/templates/${filename}`, { method: 'DELETE' })
+                .then(res => res.json())
+                .then(() => {
+                    showToast('Фон удален');
+                    if (state.currentTemplateId === filename) {
+                        selectTemplate({ filename: 'template.png', url: '/assets/template.png', name: 'Тетрадь в клетку' });
+                    } else {
+                        loadTemplatesList();
+                    }
+                })
+                .catch(err => showToast('Ошибка при удалении', true));
+        }
+
+        // ==========================================
+        // FONTS MANAGEMENT
+        // ==========================================
+        const fontDropzone = document.getElementById('fontDropzone');
+        const fontFileInput = document.getElementById('fontFileInput');
+        const fontsList = document.getElementById('fontsList');
+
+        fontDropzone.addEventListener('click', () => fontFileInput.click());
+
+        fontFileInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files.length > 0) {
+                const file = e.target.files[0];
+                const formData = new FormData();
+                formData.append('file', file);
+
+                fetch('/api/upload-font', { method: 'POST', body: formData })
+                    .then(res => res.json())
+                    .then(data => {
+                        showToast(`Шрифт ${data.name} загружен!`);
+                        loadFontsList();
+                    })
+                    .catch(() => showToast('Ошибка загрузки шрифта', true));
+            }
+        });
+
+        function loadFontsList() {
+            fetch('/api/fonts')
+                .then(res => res.json())
+                .then(fonts => {
+                    fontsList.innerHTML = '';
+                    fonts.forEach(f => {
+                        const fontOption = document.createElement('div');
+                        const isCurrent = state.fontName === f.name || (f.is_default && state.fontName === 'HandwrittenFont');
+
+                        fontOption.className = `p-2 rounded-xl bg-[#0a0a0d] border ${isCurrent ? 'border-amber-500/80 text-amber-300 font-semibold' : 'border-zinc-800 text-zinc-300 hover:border-zinc-700'} text-xs flex justify-between items-center cursor-pointer transition-colors`;
+                        fontOption.innerHTML = `
+                            <span>${f.name}</span>
+                            ${isCurrent ? '<i data-lucide="check" class="w-3.5 h-3.5 text-amber-400"></i>' : ''}
+                        `;
+
+                        fontOption.addEventListener('click', () => {
+                            if (!f.is_default) {
+                                const newFont = new FontFace(f.name, `url(${f.url})`);
+                                newFont.load().then(loadedFont => {
+                                    document.fonts.add(loadedFont);
+                                    state.fontName = f.name;
+                                    triggerRedraw();
+                                    loadFontsList();
+                                    showToast(`Шрифт: ${f.name}`);
+                                });
+                            } else {
+                                state.fontName = 'HandwrittenFont';
+                                triggerRedraw();
+                                loadFontsList();
+                                showToast(`Шрифт по умолчанию`);
+                            }
+                        });
+
+                        fontsList.appendChild(fontOption);
+                    });
+                    lucide.createIcons();
+                });
+        }
+
+        // ==========================================
+        // PRESETS MANAGEMENT
+        // ==========================================
+        function loadPresets() {
+            const list = document.getElementById('presetButtonsList');
+            list.innerHTML = '';
+
+            let userPresets = [];
+            try {
+                userPresets = JSON.parse(localStorage.getItem('hw_user_presets') || '[]');
+            } catch(e){}
+
+            const allPresets = [...DEFAULT_PRESETS, ...userPresets];
+
+            allPresets.forEach((p) => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left p-2.5 rounded-xl bg-[#0a0a0d] border border-zinc-800 hover:border-zinc-700 text-xs text-zinc-300 hover:text-white flex items-center justify-between transition-colors cursor-pointer";
+                btn.innerHTML = `
+                    <span class="font-medium truncate">${p.name}</span>
+                    <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-zinc-600"></i>
+                `;
+                btn.addEventListener('click', () => {
+                    applyPreset(p);
+                    showToast(`Стиль: ${p.name}`);
+                });
+                list.appendChild(btn);
+            });
+            lucide.createIcons();
+        }
+
+        function applyPreset(preset) {
+            const s = preset.settings;
+            Object.keys(s).forEach(k => {
+                if (k in state) state[k] = s[k];
+            });
+
+            document.getElementById('font_size').value = state.fontSize;
+            document.getElementById('num_font_size').value = state.fontSize;
+            document.getElementById('line_spacing').value = state.lineSpacing;
+            document.getElementById('num_line_spacing').value = state.lineSpacing;
+            document.getElementById('word_spacing').value = state.wordSpacing;
+            document.getElementById('num_word_spacing').value = state.wordSpacing;
+            document.getElementById('paragraph_indent').value = state.paragraphIndent;
+            document.getElementById('num_paragraph_indent').value = state.paragraphIndent;
+            document.getElementById('start_y').value = state.startY;
+            document.getElementById('num_start_y').value = state.startY;
+            document.getElementById('margin_left').value = state.marginLeftOdd;
+            document.getElementById('num_margin_left').value = state.marginLeftOdd;
+            document.getElementById('text_width_limit').value = state.textWidthLimitOdd;
+            document.getElementById('num_text_width_limit').value = state.textWidthLimitOdd;
+            document.getElementById('margin_right_page').value = state.marginLeftEven;
+            document.getElementById('num_margin_right_page').value = state.marginLeftEven;
+            document.getElementById('text_width_limit_even').value = state.textWidthLimitEven;
+            document.getElementById('num_text_width_limit_even').value = state.textWidthLimitEven;
+            document.getElementById('text_rotate').value = state.textRotate;
+            document.getElementById('num_text_rotate').value = state.textRotate;
+            document.getElementById('random_size').value = state.randomSize;
+            document.getElementById('num_random_size').value = state.randomSize;
+            document.getElementById('baseline_jitter').value = state.baselineJitter;
+            document.getElementById('num_baseline_jitter').value = state.baselineJitter;
+            document.getElementById('slant_jitter').value = state.slantJitter;
+            document.getElementById('num_slant_jitter').value = state.slantJitter;
+            document.getElementById('ink_pressure').value = state.inkPressure;
+            document.getElementById('num_ink_pressure').value = state.inkPressure;
+
+            setInkColor(state.inkColor);
+
+            if (s.currentTemplateUrl && s.currentTemplateUrl !== state.currentTemplateUrl) {
+                const img = new Image();
+                img.onload = () => {
+                    currentBgImage = img;
+                    triggerRedraw();
+                };
+                img.src = s.currentTemplateUrl;
+            } else {
+                triggerRedraw();
             }
         }
 
-        inputs.forEach(id => {
-            document.getElementById(id).addEventListener('input', draw);
+        // Save Custom Preset
+        document.getElementById('btnSavePreset').addEventListener('click', () => {
+            const nameInput = document.getElementById('newPresetName');
+            const name = nameInput.value.trim();
+            if (!name) {
+                showToast('Введите название для пресета', true);
+                return;
+            }
+
+            let userPresets = [];
+            try {
+                userPresets = JSON.parse(localStorage.getItem('hw_user_presets') || '[]');
+            } catch(e){}
+
+            userPresets.push({
+                name: `⭐ ${name}`,
+                settings: { ...state }
+            });
+
+            localStorage.setItem('hw_user_presets', JSON.stringify(userPresets));
+            nameInput.value = '';
+            loadPresets();
+            showToast('Пресет успешно сохранён!');
         });
 
-        // Скачивание холста
-        document.getElementById('downloadBtn').addEventListener('click', () => {
-            const link = document.createElement('a');
-            link.download = 'handwritten_classic_dark.png';
-            link.href = canvas.toDataURL('image/png');
-            link.click();
+        // ==========================================
+        // EXPORT TO PDF & ZIP
+        // ==========================================
+        document.getElementById('btnDownloadPdf').addEventListener('click', async () => {
+            if (generatedCanvases.length === 0) {
+                showToast('Нет страниц для экспорта', true);
+                return;
+            }
+
+            showToast('Формирование чистого PDF...');
+            const { jsPDF } = window.jspdf;
+            const firstCanvas = generatedCanvases[0];
+            const isLandscape = firstCanvas.width > firstCanvas.height;
+
+            const pdf = new jsPDF({
+                orientation: isLandscape ? 'landscape' : 'portrait',
+                unit: 'px',
+                format: [firstCanvas.width, firstCanvas.height]
+            });
+
+            for (let i = 0; i < generatedCanvases.length; i++) {
+                const c = generatedCanvases[i];
+                if (i > 0) {
+                    pdf.addPage([c.width, c.height], isLandscape ? 'landscape' : 'portrait');
+                }
+                const imgData = c.toDataURL('image/jpeg', 0.95);
+                pdf.addImage(imgData, 'JPEG', 0, 0, c.width, c.height);
+            }
+
+            pdf.save('handwritten_notebook.pdf');
+            showToast('PDF успешно сохранен!');
         });
 
-        bgImage.onload = () => { setTimeout(draw, 300); };
-        window.addEventListener('load', draw);
+        document.getElementById('btnDownloadZip').addEventListener('click', () => {
+            if (generatedCanvases.length === 0) {
+                showToast('Нет страниц для экспорта', true);
+                return;
+            }
+
+            showToast('Создание ZIP архива...');
+            const zip = new JSZip();
+
+            generatedCanvases.forEach((canvas, index) => {
+                const dataUrl = canvas.toDataURL('image/png');
+                const base64Data = dataUrl.replace(/^data:image\/(png|jpg);base64,/, "");
+                zip.file(`handwritten_page_${index + 1}.png`, base64Data, { base64: true });
+            });
+
+            zip.generateAsync({ type: "blob" }).then(function(content) {
+                const link = document.createElement('a');
+                link.download = 'handwritten_notebook.zip';
+                link.href = URL.createObjectURL(content);
+                link.click();
+                showToast('ZIP архив скачан!');
+            });
+        });
+
+        // ==========================================
+        // PERSISTENCE (LOCALSTORAGE)
+        // ==========================================
+        function saveToLocalStorage() {
+            try {
+                localStorage.setItem('hw_saved_text', state.text);
+            } catch(e){}
+        }
+
+        function restoreFromLocalStorage() {
+            try {
+                const savedText = localStorage.getItem('hw_saved_text');
+                if (savedText !== null && savedText.trim().length > 0) {
+                    state.text = savedText;
+                    textInput.value = savedText;
+                }
+            } catch(e){}
+        }
+
+        // Keyboard Shortcuts
+        window.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                draw();
+                showToast('Отрисовка обновлена');
+            }
+        });
+
+        // Initialize App
+        window.addEventListener('load', () => {
+            restoreFromLocalStorage();
+            updateStats();
+            loadTemplatesList();
+            loadFontsList();
+            loadPresets();
+
+            currentBgImage.onload = () => {
+                setTimeout(draw, 150);
+            };
+
+            if (currentBgImage.complete) {
+                setTimeout(draw, 150);
+            }
+        });
     </script>
 </body>
 </html>
