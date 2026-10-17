@@ -19,6 +19,9 @@
             try {
                 window.Telegram.WebApp.ready();
                 window.Telegram.WebApp.expand();
+                if (typeof window.Telegram.WebApp.requestFullscreen === 'function' && !window.Telegram.WebApp.isFullscreen) {
+                    window.Telegram.WebApp.requestFullscreen();
+                }
             } catch (e) {
                 console.warn('Early Telegram WebApp init warning:', e);
             }
@@ -145,6 +148,11 @@
             <button id="btnOpenTariffs" class="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer bg-gradient-to-r from-amber-500/20 via-yellow-500/15 to-amber-600/20 text-amber-300 border border-amber-500/50 hover:border-amber-400 shadow-sm active:scale-95">
                 <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-400"></i>
                 <span id="headerProStatus">Тарифы ⭐</span>
+            </button>
+
+            <button id="btnToggleFullscreen" class="hidden sm:flex px-2.5 py-2 rounded-xl text-xs font-medium text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60 active:scale-95 transition-all cursor-pointer items-center gap-1.5 border border-zinc-800/70" title="На весь экран (ПК и планшет)">
+                <i id="fullscreenIcon" data-lucide="fullscreen" class="w-3.5 h-3.5 text-zinc-300"></i>
+                <span id="fullscreenText" class="hidden lg:inline">На весь экран</span>
             </button>
 
             <button id="btnResetAll" class="hidden md:flex px-2.5 py-2 rounded-xl text-xs font-medium text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60 transition-all cursor-pointer items-center gap-1.5" title="Сбросить все настройки к начальным">
@@ -755,12 +763,91 @@
             try {
                 tg.ready();
                 tg.expand();
+                if (typeof tg.requestFullscreen === 'function' && !tg.isFullscreen) {
+                    tg.requestFullscreen();
+                }
                 if (tg.setHeaderColor) tg.setHeaderColor('#0f0f12');
                 if (tg.setBackgroundColor) tg.setBackgroundColor('#09090b');
             } catch(e) {
                 console.warn('Telegram WebApp init warning:', e);
             }
         }
+
+        // ==========================================
+        // 🖥️ FULLSCREEN CONTROLS (DESKTOP / TABLET / TMA)
+        // ==========================================
+        const btnToggleFullscreen = document.getElementById('btnToggleFullscreen');
+        const fullscreenIcon = document.getElementById('fullscreenIcon');
+        const fullscreenText = document.getElementById('fullscreenText');
+
+        function updateFullscreenUI(isFull) {
+            if (fullscreenIcon) {
+                fullscreenIcon.setAttribute('data-lucide', isFull ? 'minimize' : 'fullscreen');
+            }
+            if (fullscreenText) {
+                fullscreenText.innerText = isFull ? 'Обычный вид' : 'На весь экран';
+            }
+            try {
+                if (window.lucide && typeof window.lucide.createIcons === 'function') {
+                    lucide.createIcons();
+                }
+            } catch(e) {}
+        }
+
+        function toggleFullscreen() {
+            if (tg && typeof tg.requestFullscreen === 'function') {
+                try {
+                    if (tg.isFullscreen) {
+                        if (tg.exitFullscreen) tg.exitFullscreen();
+                    } else {
+                        tg.requestFullscreen();
+                    }
+                } catch(e) {
+                    console.warn('TG fullscreen toggle error:', e);
+                }
+            } else {
+                // Browser Fullscreen API fallback for Chrome, Edge, Safari on PC/Mac
+                try {
+                    if (!document.fullscreenElement) {
+                        document.documentElement.requestFullscreen().catch(err => {
+                            console.log('Browser fullscreen failed:', err);
+                        });
+                    } else {
+                        if (document.exitFullscreen) document.exitFullscreen();
+                    }
+                } catch(e) {}
+            }
+        }
+
+        if (btnToggleFullscreen) {
+            btnToggleFullscreen.addEventListener('click', () => {
+                toggleFullscreen();
+                if (tg?.HapticFeedback) tg.HapticFeedback.selectionChanged();
+            });
+        }
+
+        // Auto-request fullscreen on first user interaction for Telegram Desktop / Tablet
+        const autoFullscreenHandler = () => {
+            if (tg && typeof tg.requestFullscreen === 'function' && !tg.isFullscreen) {
+                try {
+                    tg.requestFullscreen();
+                } catch(e) {}
+            }
+        };
+        window.addEventListener('click', autoFullscreenHandler, { once: true });
+        window.addEventListener('touchstart', autoFullscreenHandler, { once: true });
+
+        // Telegram WebApp fullscreen events
+        if (tg && typeof tg.onEvent === 'function') {
+            tg.onEvent('fullscreenChanged', () => {
+                updateFullscreenUI(!!tg.isFullscreen);
+            });
+        }
+
+        // Standard browser fullscreen events
+        document.addEventListener('fullscreenchange', () => {
+            updateFullscreenUI(!!document.fullscreenElement);
+        });
 
         // Initialize Lucide Icons safely
         try {
