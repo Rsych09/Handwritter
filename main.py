@@ -501,10 +501,10 @@ async def export_and_send_to_telegram(
         raise HTTPException(status_code=400, detail="Файл пуст.")
 
     token = uuid.uuid4().hex[:16]
-    orig_name = file.filename or "handwritten_document.pdf"
+    orig_name = file.filename or f"Document_{time.strftime('%Y%m%d_%H%M')}.pdf"
     safe_filename = "".join(c for c in orig_name if c.isalnum() or c in "._-")
     if not safe_filename:
-        safe_filename = "handwritten_document.pdf"
+        safe_filename = f"Document_{time.strftime('%Y%m%d_%H%M')}.pdf"
 
     # Сохраняем во временную директорию
     file_path = EXPORTS_DIR / f"{token}_{safe_filename}"
@@ -527,7 +527,7 @@ async def export_and_send_to_telegram(
             user_id = user_info["id"]
             try:
                 from aiogram.types import BufferedInputFile
-                msg_caption = caption or f"✍️ Ваш файл «{safe_filename}» готов!"
+                msg_caption = caption if (caption is not None and caption.strip()) else ""
                 await bot.send_document(
                     chat_id=user_id,
                     document=BufferedInputFile(content, filename=safe_filename),
