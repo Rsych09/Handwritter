@@ -651,7 +651,7 @@
     </div>
 
     <!-- Mobile Bottom Navigation Bar (Telegram Friendly) -->
-    <nav class="md:hidden bg-[#0f0f12]/95 backdrop-blur-lg border-t border-zinc-800/80 px-2 py-1.5 flex justify-around items-center z-30 shrink-0 select-none">
+    <nav class="md:hidden bg-[#0f0f12]/95 backdrop-blur-lg border-t border-zinc-800/80 px-4 py-1.5 flex justify-around items-center z-30 shrink-0 select-none">
         <button id="mobileNavText" class="flex-1 py-1.5 flex flex-col items-center gap-1 text-amber-400 text-[10px] font-semibold transition-all">
             <i data-lucide="edit-3" class="w-4 h-4"></i>
             <span>Текст</span>
@@ -659,10 +659,6 @@
         <button id="mobileNavSettings" class="flex-1 py-1.5 flex flex-col items-center gap-1 text-zinc-400 hover:text-zinc-200 text-[10px] font-medium transition-all">
             <i data-lucide="sliders" class="w-4 h-4"></i>
             <span>Параметры</span>
-        </button>
-        <button id="mobileNavPreview" class="flex-1 py-1.5 flex flex-col items-center gap-1 text-zinc-400 hover:text-zinc-200 text-[10px] font-medium transition-all relative">
-            <i data-lucide="book-open" class="w-4 h-4"></i>
-            <span>Лист</span>
         </button>
         <button id="mobileNavTariffs" class="flex-1 py-1.5 flex flex-col items-center gap-1 text-amber-300 hover:text-amber-200 text-[10px] font-semibold transition-all">
             <i data-lucide="sparkles" class="w-4 h-4 text-amber-400"></i>
@@ -934,11 +930,10 @@
         const previewPanel = document.getElementById('previewPanel');
         const mobileNavText = document.getElementById('mobileNavText');
         const mobileNavSettings = document.getElementById('mobileNavSettings');
-        const mobileNavPreview = document.getElementById('mobileNavPreview');
         const mobileNavTariffs = document.getElementById('mobileNavTariffs');
 
         function setMobileTab(activeNavId) {
-            [mobileNavText, mobileNavSettings, mobileNavPreview, mobileNavTariffs].forEach(btn => {
+            [mobileNavText, mobileNavSettings, mobileNavTariffs].forEach(btn => {
                 if (btn) btn.className = "flex-1 py-1.5 flex flex-col items-center gap-1 text-zinc-400 hover:text-zinc-200 text-[10px] font-medium transition-all";
             });
 
@@ -962,19 +957,6 @@
             sidebarPanel.classList.remove('hidden');
             previewPanel.classList.add('hidden');
             document.getElementById('tabBtnPaper').click();
-        });
-
-        mobileNavPreview?.addEventListener('click', () => {
-            setMobileTab('mobileNavPreview');
-            sidebarPanel.classList.remove('hidden');
-            previewPanel.classList.add('hidden');
-            document.getElementById('tabBtnText').click();
-            setTimeout(() => {
-                const previewSec = document.getElementById('inlinePreviewSection');
-                if (previewSec) {
-                    previewSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-            }, 60);
         });
 
         mobileNavTariffs?.addEventListener('click', () => {
