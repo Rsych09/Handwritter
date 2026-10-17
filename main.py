@@ -23,7 +23,7 @@ from dotenv import load_dotenv
 # Загружаем переменные окружения из .env
 load_dotenv()
 
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Header, Query, Request
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Header, Query, Request, Body
 from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -38,6 +38,8 @@ from database import (
     admin_grant_pro,
     admin_revoke_pro,
     get_all_users,
+    export_database_json,
+    import_database_json,
 )
 from auth import validate_telegram_init_data
 from bot import bot, dp, PLANS, generate_stars_invoice
@@ -438,6 +440,28 @@ async def admin_revoke_pro_api(
     return JSONResponse({
         "success": True,
         "message": f"PRO отозван у пользователя {payload.telegram_id}",
+    })
+
+
+@app.get("/api/admin/backup")
+async def admin_backup_api(x_telegram_init_data: Optional[str] = Header(None)):
+    """Резервная копия базы данных пользователей (JSON)."""
+    verify_admin_request(x_telegram_init_data)
+    data = await export_database_json()
+    return JSONResponse(data)
+
+
+@app.post("/api/admin/restore")
+async def admin_restore_api(
+    payload: dict = Body(...),
+    x_telegram_init_data: Optional[str] = Header(None),
+):
+    """Восстановление базы данных пользователей из JSON."""
+    verify_admin_request(x_telegram_init_data)
+    added, updated = await import_database_json(payload)
+    return JSONResponse({
+        "success": True,
+        "message": f"Бэкап успешно восстановлен: добавлено {added}, обновлено {updated} пользователей."
     })
 
 

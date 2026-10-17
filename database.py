@@ -14,7 +14,16 @@ from sqlalchemy import (
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import declarative_base, relationship
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./handwriter.db")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./handwriter.db").strip()
+
+# Нормализация PostgreSQL URL для SQLAlchemy asyncpg (Render/Neon)
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
+elif DATABASE_URL.startswith("postgresql://") and not DATABASE_URL.startswith("postgresql+asyncpg://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+if "sslmode=" in DATABASE_URL:
+    DATABASE_URL = DATABASE_URL.replace("sslmode=", "ssl=")
 
 # Список ID администраторов (по умолчанию 1109865120)
 ADMIN_IDS = {1109865120}
@@ -25,7 +34,14 @@ if _admin_env:
         if _aid.isdigit():
             ADMIN_IDS.add(int(_aid))
 
-engine = create_async_engine(DATABASE_URL, echo=False)
+engine_kwargs = {"echo": False}
+if "sqlite" in DATABASE_URL:
+    engine_kwargs["connect_args"] = {"check_same_thread": False}
+else:
+    engine_kwargs["pool_pre_ping"] = True
+    engine_kwargs["pool_recycle"] = 300
+
+engine = create_async_engine(DATABASE_URL, **engine_kwargs)
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 Base = declarative_base()
 
@@ -260,3 +276,73 @@ async def get_recent_payments(limit: int = 10) -> list:
     async with AsyncSessionLocal() as session:
         res = await session.execute(select(Payment).order_by(Payment.id.desc()).limit(limit))
         return res.scalars().all()
+
+
+async def export_database_json() -> dict:
+    """Экспорт всех пользователей и их статусов для резервной копии."""
+    async with AsyncSessionLocal() as session:
+        users_res = await session.execute(select(User).order_by(User.id.asc()))
+        users = users_res.scalars().all()
+        return {
+            "version": 1,
+            "exported_at": datetime.now(timezone.utc).isoformat(),
+            "users_count": len(users),
+            "users": [
+                {
+                    "telegram_id": u.telegram_id,
+                    "username": u.username,
+                    "first_name": u.first_name,
+                    "is_pro": u.is_pro,
+                    "pro_expires_at": u.pro_expires_at.isoformat() if u.pro_expires_at else None,
+                    "stars_spent": u.stars_spent,
+                    "created_at": u.created_at.isoformat() if u.created_at else None,
+                }
+                for u in users
+            ]
+        }
+
+
+async def import_database_json(data: dict) -> Tuple[int, int]:
+    """Восстановление пользователей из JSON-бэкапа."""
+    async with AsyncSessionLocal() as session:
+        added = 0
+        updated = 0
+        raw_users = data.get("users", [])
+        for udata in raw_users:
+            tid = udata.get("telegram_id")
+            if not tid:
+                continue
+            res = await session.execute(select(User).where(User.telegram_id == int(tid)))
+            user = res.scalars().first()
+
+            pro_exp = None
+            if udata.get("pro_expires_at"):
+                try:
+                    pro_exp = datetime.fromisoformat(udata["pro_expires_at"])
+                except Exception:
+                    pass
+
+            if not user:
+                user = User(
+                    telegram_id=int(tid),
+                    username=udata.get("username"),
+                    first_name=udata.get("first_name"),
+                    is_pro=bool(udata.get("is_pro", False)) or (int(tid) in ADMIN_IDS),
+                    pro_expires_at=pro_exp,
+                    stars_spent=int(udata.get("stars_spent", 0)),
+                )
+                session.add(user)
+                added += 1
+            else:
+                if udata.get("is_pro") and not user.is_pro:
+                    user.is_pro = True
+                    user.pro_expires_at = pro_exp
+                if udata.get("username") and not user.username:
+                    user.username = udata.get("username")
+                if udata.get("first_name") and not user.first_name:
+                    user.first_name = udata.get("first_name")
+                user.stars_spent = max(user.stars_spent, int(udata.get("stars_spent", 0)))
+                updated += 1
+
+        await session.commit()
+        return added, updated
