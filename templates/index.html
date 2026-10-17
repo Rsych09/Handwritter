@@ -164,6 +164,13 @@
                 <span class="hidden sm:inline">Сброс</span>
             </button>
 
+            <!-- Download All PNG Button -->
+            <button id="btnDownloadAllPng" class="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs font-medium text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 active:scale-98 transition-all cursor-pointer flex items-center gap-1.5 border border-amber-500/30 shadow-sm" title="Скачать все страницы в формате PNG">
+                <i data-lucide="images" class="w-3.5 h-3.5 text-amber-400"></i>
+                <span class="hidden sm:inline">Все PNG</span>
+                <span class="sm:hidden">Все PNG</span>
+            </button>
+
             <button id="btnDownloadZip" class="hidden sm:flex px-3 py-2 rounded-xl text-xs font-medium text-zinc-200 bg-[#16161a] hover:bg-[#1f2026] active:scale-98 transition-all cursor-pointer items-center gap-1.5 border border-zinc-700/60 shadow-sm">
                 <i data-lucide="archive" class="w-3.5 h-3.5 text-zinc-400"></i>
                 <span>.ZIP</span>
@@ -267,9 +274,15 @@
                             <label class="text-[11px] font-semibold text-zinc-300 uppercase tracking-widest flex items-center gap-2">
                                 <i data-lucide="book-open" class="w-3.5 h-3.5 text-amber-400"></i> Рукописный результат
                             </label>
-                            <span id="inlinePagesCount" class="text-[10px] font-mono text-zinc-400 bg-zinc-800/90 px-2.5 py-0.5 rounded-full border border-zinc-700/60">
-                                1 лист
-                            </span>
+                            <div class="flex items-center gap-2">
+                                <span id="inlinePagesCount" class="text-[10px] font-mono text-zinc-400 bg-zinc-800/90 px-2.5 py-0.5 rounded-full border border-zinc-700/60">
+                                    1 лист
+                                </span>
+                                <button id="btnInlineDownloadAllPng" class="text-[11px] px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 rounded-lg border border-amber-500/30 transition-colors cursor-pointer flex items-center gap-1 active:scale-95 shadow-sm" title="Скачать все листы в PNG одним нажатием">
+                                    <i data-lucide="images" class="w-3 h-3 text-amber-400"></i>
+                                    <span>Все в PNG</span>
+                                </button>
+                            </div>
                         </div>
 
                         <!-- Canvases rendered on mobile screen -->
@@ -2671,14 +2684,14 @@ S(N) = 1 / ((1 - P) + P/N)
         // ==========================================
         // 📥 SMART EXPORT & MOBILE TELEGRAM DOWNLOAD
         // ==========================================
-        async function handleExportDownload(blob, filename, mimeType, caption) {
+        async function handleExportDownload(blob, filename, mimeType, caption, showModal = true) {
             const tg = window.Telegram?.WebApp;
             const isTelegram = Boolean(tg && tg.initData);
 
-            showToast('Подготовка файла...');
+            if (showModal) showToast('Подготовка файла...');
 
             if (isTelegram) {
-                showToast('Отправка в чат Telegram... ⏳');
+                if (showModal) showToast('Отправка в чат Telegram... ⏳');
                 try {
                     const formData = new FormData();
                     formData.append('file', blob, filename);
@@ -2696,13 +2709,17 @@ S(N) = 1 / ((1 - P) + P/N)
                             if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
                             
                             if (result.sent_to_telegram) {
-                                showToast('✅ Файл отправлен в ваш чат с ботом!');
-                                if (tg.showPopup) {
-                                    tg.showPopup({
-                                        title: "Файл готов! 📄",
-                                        message: `«${filename}» успешно отправлен в ваш личный диалог с ботом! Вы можете открыть, сохранить в память телефона или переслать его прямо в Telegram.`,
-                                        buttons: [{ type: "ok", text: "Отлично" }]
-                                    });
+                                if (showModal) {
+                                    showToast('✅ Файл отправлен в ваш чат с ботом!');
+                                    if (tg.showPopup) {
+                                        tg.showPopup({
+                                            title: "Файл готов! 📄",
+                                            message: `«${filename}» успешно отправлен в ваш личный диалог с ботом! Вы можете открыть, сохранить в память телефона или переслать его прямо в Telegram.`,
+                                            buttons: [{ type: "ok", text: "Отлично" }]
+                                        });
+                                    }
+                                } else {
+                                    showToast(`✅ Отправлен: ${filename}`);
                                 }
                             }
 
@@ -2713,7 +2730,7 @@ S(N) = 1 / ((1 - P) + P/N)
                                         url: result.download_url,
                                         file_name: filename
                                     }, function(accepted) {
-                                        if (accepted) {
+                                        if (accepted && showModal) {
                                             showToast('Файл сохраняется на устройство...');
                                         }
                                     });
@@ -2741,7 +2758,9 @@ S(N) = 1 / ((1 - P) + P/N)
                     document.body.removeChild(link);
                     URL.revokeObjectURL(blobUrl);
                 }, 1500);
-                showToast(`Файл «${filename}» скачивается!`);
+                if (showModal) {
+                    showToast(`Файл «${filename}» скачивается!`);
+                }
             } catch(e) {
                 showToast('Ошибка при скачивании файла', true);
             }
@@ -2994,6 +3013,119 @@ S(N) = 1 / ((1 - P) + P/N)
                 }
             }, 30);
         });
+
+        // ==========================================
+        // 📥 DOWNLOAD ALL PAGES AS PNG (BATCH EXPORT)
+        // ==========================================
+        async function downloadAllPagesAsPng(triggerBtn) {
+            if (generatedCanvases.length === 0) {
+                showToast('Нет страниц для экспорта', true);
+                return;
+            }
+
+            if (!currentUser.is_pro && generatedCanvases.length > 3) {
+                showToast('В бесплатной версии экспорт ограничен 3 страницами. Оформите PRO для безлимита! ⭐', true);
+                openTariffsModal();
+                return;
+            }
+
+            if (triggerBtn && triggerBtn.dataset.busy === "1") return;
+            if (triggerBtn) {
+                triggerBtn.dataset.busy = "1";
+                triggerBtn.classList.add('opacity-80', 'pointer-events-none');
+            }
+
+            if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+
+            const origHtml = triggerBtn ? triggerBtn.innerHTML : '';
+            if (triggerBtn) {
+                triggerBtn.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin text-amber-400"></i> <span class="hidden sm:inline">Отправка...</span><span class="sm:hidden">0%</span>`;
+                if (window.lucide) lucide.createIcons();
+            }
+
+            const total = generatedCanvases.length;
+            showToast(`Подготовка всех ${total} ${total === 1 ? 'листа' : (total < 5 ? 'листов' : 'листов')} в PNG...`, false, true);
+
+            setTimeout(async () => {
+                let successCount = 0;
+                try {
+                    for (let i = 0; i < total; i++) {
+                        const pageNum = i + 1;
+                        const canvas = generatedCanvases[i];
+
+                        if (triggerBtn) {
+                            triggerBtn.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin text-amber-400"></i> <span>${pageNum}/${total}</span>`;
+                            if (window.lucide) lucide.createIcons();
+                        }
+                        showToast(`Отправка листа ${pageNum} из ${total}... ⏳`, false, true);
+
+                        const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+                        if (blob) {
+                            const photoName = getExportPhotoName(pageNum);
+                            const photoCaption = (currentUser && currentUser.is_pro)
+                                ? `📷 Фото листа ${pageNum} из ${total}`
+                                : `✍️ Лист ${pageNum} из ${total} от Handwriter Studio (@HandwriterStudio_bot)\n⭐ В тарифах PRO названия файлов маскируются под камеру смартфона!`;
+
+                            await handleExportDownload(
+                                blob,
+                                photoName,
+                                'image/png',
+                                photoCaption,
+                                false
+                            );
+                            successCount++;
+                        }
+
+                        if (tg?.HapticFeedback) tg.HapticFeedback.selectionChanged();
+
+                        if (i < total - 1) {
+                            await new Promise(r => setTimeout(r, 350));
+                        }
+                    }
+
+                    if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+                    showToast(`✅ Все ${total} ${total === 1 ? 'лист' : (total < 5 ? 'листа' : 'листов')} успешно отправлены!`);
+
+                    const isTelegram = Boolean(tg && tg.initData);
+                    if (isTelegram && tg.showPopup) {
+                        tg.showPopup({
+                            title: "Все листы отправлены! 🖼️",
+                            message: `Все ${total} ${total === 1 ? 'лист' : (total < 5 ? 'листа' : 'листов')} в высоком качестве PNG отправлены в ваш диалог с ботом!\nВы можете сохранить их прямо в галерею смартфона или переслать кому угодно.`,
+                            buttons: [{ type: "ok", text: "Отлично" }]
+                        });
+                    }
+
+                    if (triggerBtn) {
+                        triggerBtn.innerHTML = `<i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> <span>Готово!</span>`;
+                        if (window.lucide) lucide.createIcons();
+                    }
+                } catch(err) {
+                    console.error('Download all PNG error:', err);
+                    showToast('Произошла ошибка при отправке файлов', true);
+                    if (triggerBtn) triggerBtn.innerHTML = origHtml;
+                    if (window.lucide) lucide.createIcons();
+                } finally {
+                    setTimeout(() => {
+                        if (triggerBtn) {
+                            triggerBtn.innerHTML = origHtml;
+                            triggerBtn.classList.remove('opacity-80', 'pointer-events-none');
+                            triggerBtn.dataset.busy = "0";
+                            if (window.lucide) lucide.createIcons();
+                        }
+                    }, 2500);
+                }
+            }, 30);
+        }
+
+        const btnDownloadAllPng = document.getElementById('btnDownloadAllPng');
+        if (btnDownloadAllPng) {
+            btnDownloadAllPng.addEventListener('click', () => downloadAllPagesAsPng(btnDownloadAllPng));
+        }
+
+        const btnInlineDownloadAllPng = document.getElementById('btnInlineDownloadAllPng');
+        if (btnInlineDownloadAllPng) {
+            btnInlineDownloadAllPng.addEventListener('click', () => downloadAllPagesAsPng(btnInlineDownloadAllPng));
+        }
 
         // ==========================================
         // PERSISTENCE (LOCALSTORAGE)
