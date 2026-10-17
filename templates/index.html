@@ -2167,6 +2167,27 @@ S(N) = 1 / ((1 - P) + P/N)
             return `Photos_${dateStr}_${timeStr.slice(0, 4)}.zip`;
         }
 
+        function getExportPhotoName(pageNum) {
+            if (currentUser && currentUser.is_pro) {
+                return getStealthPhotoName(pageNum);
+            }
+            return `Handwriter_page_${pageNum}.png`;
+        }
+
+        function getExportPdfName() {
+            if (currentUser && currentUser.is_pro) {
+                return getStealthPdfName();
+            }
+            return `Handwriter_Notebook.pdf`;
+        }
+
+        function getExportZipName() {
+            if (currentUser && currentUser.is_pro) {
+                return getStealthZipName();
+            }
+            return `Handwriter_Notebook.zip`;
+        }
+
         // Create Page Card Component with Studio Precision
         function createPageCard(pageNum, canvas, isInline = false) {
             const wrapper = document.createElement('div');
@@ -2254,7 +2275,7 @@ S(N) = 1 / ((1 - P) + P/N)
                 }, 30);
             });
 
-            // Download PNG Button (Instant visual feedback + Stealth name)
+            // Download PNG Button (Instant visual feedback + Stealth name for PRO)
             const dlBtn = document.createElement('button');
             dlBtn.className = "px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-xl text-xs font-medium flex items-center gap-1.5 border border-zinc-700/60 transition-all cursor-pointer shadow-sm active:scale-95";
             dlBtn.innerHTML = `<i data-lucide="download" class="w-3.5 h-3.5 text-zinc-300"></i> PNG`;
@@ -2288,12 +2309,16 @@ S(N) = 1 / ((1 - P) + P/N)
                             return;
                         }
                         try {
-                            const photoName = getStealthPhotoName(pageNum);
+                            const photoName = getExportPhotoName(pageNum);
+                            const photoCaption = (currentUser && currentUser.is_pro)
+                                ? `📷 Фото листа ${pageNum}`
+                                : `✍️ Создано в Handwriter Studio (@HandwriterStudio_bot)\n⭐ В тарифах PRO названия файлов маскируются под камеру смартфона!`;
+
                             await handleExportDownload(
                                 blob,
                                 photoName,
                                 'image/png',
-                                `📷 Фото листа ${pageNum}`
+                                photoCaption
                             );
                             dlBtn.innerHTML = `<i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> Отправлен!`;
                             if (window.lucide) lucide.createIcons();
@@ -2770,12 +2795,15 @@ S(N) = 1 / ((1 - P) + P/N)
                 if (!currentPreviewCanvas) return;
                 currentPreviewCanvas.toBlob(async (blob) => {
                     if (!blob) return;
-                    const photoName = getStealthPhotoName(currentPreviewPageNum);
+                    const photoName = getExportPhotoName(currentPreviewPageNum);
+                    const photoCaption = (currentUser && currentUser.is_pro)
+                        ? `📷 Фото листа ${currentPreviewPageNum}`
+                        : `✍️ Создано в Handwriter Studio (@HandwriterStudio_bot)\n⭐ В тарифах PRO названия файлов маскируются под камеру смартфона!`;
                     await handleExportDownload(
                         blob,
                         photoName,
                         'image/png',
-                        `📷 Фото листа ${currentPreviewPageNum}`
+                        photoCaption
                     );
                 }, 'image/png');
             });
@@ -2786,12 +2814,15 @@ S(N) = 1 / ((1 - P) + P/N)
                 if (!currentPreviewCanvas) return;
                 currentPreviewCanvas.toBlob(async (blob) => {
                     if (!blob) return;
-                    const photoName = getStealthPhotoName(currentPreviewPageNum);
+                    const photoName = getExportPhotoName(currentPreviewPageNum);
+                    const photoCaption = (currentUser && currentUser.is_pro)
+                        ? `📷 Фото листа ${currentPreviewPageNum}`
+                        : `✍️ Создано в Handwriter Studio (@HandwriterStudio_bot)\n⭐ В тарифах PRO названия файлов маскируются под камеру смартфона!`;
                     await handleExportDownload(
                         blob,
                         photoName,
                         'image/png',
-                        `📷 Фото листа ${currentPreviewPageNum}`
+                        photoCaption
                     );
                 }, 'image/png');
             });
@@ -2836,12 +2867,19 @@ S(N) = 1 / ((1 - P) + P/N)
                         format: [firstCanvas.width, firstCanvas.height]
                     });
 
-                    pdf.setProperties({
-                        title: 'Document',
-                        subject: 'Document',
-                        author: '',
-                        creator: 'Mobile Scanner'
-                    });
+                    if (currentUser && currentUser.is_pro) {
+                        pdf.setProperties({
+                            title: 'Document',
+                            subject: 'Document',
+                            author: '',
+                            creator: 'Mobile Scanner'
+                        });
+                    } else {
+                        pdf.setProperties({
+                            title: 'Handwriter Studio Document',
+                            creator: 'Handwriter Studio'
+                        });
+                    }
 
                     for (let i = 0; i < generatedCanvases.length; i++) {
                         const c = generatedCanvases[i];
@@ -2853,12 +2891,16 @@ S(N) = 1 / ((1 - P) + P/N)
                     }
 
                     const pdfBlob = pdf.output('blob');
-                    const pdfName = getStealthPdfName();
+                    const pdfName = getExportPdfName();
+                    const pdfCaption = (currentUser && currentUser.is_pro)
+                        ? `📄 Документ (${generatedCanvases.length} стр.)`
+                        : `📄 Конспект от Handwriter Studio (@HandwriterStudio_bot)\n⭐ В тарифах PRO названия файлов маскируются под камеру телефона!`;
+
                     await handleExportDownload(
                         pdfBlob,
                         pdfName,
                         'application/pdf',
-                        `📄 Документ (${generatedCanvases.length} стр.)`
+                        pdfCaption
                     );
 
                     btnPdf.innerHTML = `<i data-lucide="check" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600"></i> <span>Отправлен!</span>`;
@@ -2906,14 +2948,21 @@ S(N) = 1 / ((1 - P) + P/N)
             setTimeout(() => {
                 try {
                     const zip = new JSZip();
-                    const zipName = getStealthZipName();
+                    const zipName = getExportZipName();
                     const { dateStr, pad } = getStealthDateParts();
 
                     generatedCanvases.forEach((canvas, index) => {
                         const dataUrl = canvas.toDataURL('image/png');
                         const base64Data = dataUrl.replace(/^data:image\/(png|jpg);base64,/, "");
-                        zip.file(`IMG_${dateStr}_${pad(index + 1)}.png`, base64Data, { base64: true });
+                        const fileName = (currentUser && currentUser.is_pro)
+                            ? `IMG_${dateStr}_${pad(index + 1)}.png`
+                            : `Handwriter_page_${index + 1}.png`;
+                        zip.file(fileName, base64Data, { base64: true });
                     });
+
+                    const zipCaption = (currentUser && currentUser.is_pro)
+                        ? `📦 Архив фото (${generatedCanvases.length} шт.)`
+                        : `📦 Архив от Handwriter Studio (@HandwriterStudio_bot)\n⭐ В тарифах PRO названия файлов маскируются под камеру телефона!`;
 
                     zip.generateAsync({ type: "blob" }).then(async function(content) {
                         try {
@@ -2921,7 +2970,7 @@ S(N) = 1 / ((1 - P) + P/N)
                                 content,
                                 zipName,
                                 'application/zip',
-                                `📦 Архив фото (${generatedCanvases.length} шт.)`
+                                zipCaption
                             );
                             btnZip.innerHTML = `<i data-lucide="check" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400"></i> <span>Отправлен!</span>`;
                             if (window.lucide) lucide.createIcons();

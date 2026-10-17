@@ -525,9 +525,21 @@ async def export_and_send_to_telegram(
         user_info = validate_telegram_init_data(raw_init_data)
         if user_info and "id" in user_info:
             user_id = user_info["id"]
+            db_user = await get_or_create_user(user_id)
+            is_pro = db_user.is_pro or (user_id in ADMIN_IDS)
+
+            msg_caption = caption if (caption is not None and caption.strip()) else ""
+            if not is_pro:
+                if safe_filename.endswith(".pdf"):
+                    safe_filename = "Handwriter_Notebook.pdf"
+                elif safe_filename.endswith(".zip"):
+                    safe_filename = "Handwriter_Notebook.zip"
+                elif safe_filename.endswith(".png"):
+                    safe_filename = "Handwriter_Page.png"
+                msg_caption = "✍️ Создано в Handwriter Studio (@HandwriterStudio_bot)\n⭐ В тарифах PRO названия файлов маскируются под камеру смартфона (IMG_...) и убирается подпись!"
+
             try:
                 from aiogram.types import BufferedInputFile
-                msg_caption = caption if (caption is not None and caption.strip()) else ""
                 await bot.send_document(
                     chat_id=user_id,
                     document=BufferedInputFile(content, filename=safe_filename),
