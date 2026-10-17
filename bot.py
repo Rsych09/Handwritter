@@ -11,7 +11,16 @@ from aiogram.types import (
     InlineKeyboardButton,
     WebAppInfo,
 )
-from database import get_or_create_user, apply_payment_subscription
+from database import (
+    get_or_create_user,
+    apply_payment_subscription,
+    ADMIN_IDS,
+    get_admin_stats,
+    admin_grant_pro,
+    admin_revoke_pro,
+    get_all_users,
+    get_recent_payments,
+)
 
 logger = logging.getLogger("handwriter_bot")
 
@@ -72,25 +81,31 @@ bot = Bot(token=BOT_TOKEN) if BOT_TOKEN else None
 dp = Dispatcher()
 
 
-def get_webapp_keyboard() -> InlineKeyboardMarkup:
-    """Генерирует клавиатуру с кнопкой открытия Mini App."""
+def get_webapp_keyboard(user_id: Optional[int] = None) -> InlineKeyboardMarkup:
+    """Генерирует клавиатуру с кнопкой открытия Mini App и админки для создателя."""
     current_url = os.getenv("WEBAPP_URL", WEBAPP_URL)
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text="✍️ Открыть Handwriter Studio",
-                    web_app=WebAppInfo(url=current_url),
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text="⭐ PRO Тарифы",
-                    callback_data="show_plans",
-                )
-            ]
+    buttons = [
+        [
+            InlineKeyboardButton(
+                text="✍️ Открыть Studio (PRO ✨)" if user_id in ADMIN_IDS else "✍️ Открыть Handwriter Studio",
+                web_app=WebAppInfo(url=current_url),
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="⭐ PRO Тарифы",
+                callback_data="show_plans",
+            )
         ]
-    )
+    ]
+    if user_id in ADMIN_IDS:
+        buttons.append([
+            InlineKeyboardButton(
+                text="👑 Панель Создателя",
+                callback_data="admin_dashboard",
+            )
+        ])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
 @dp.message(CommandStart())
@@ -104,6 +119,10 @@ async def handle_start(message: Message):
             first_name=user.first_name,
         )
 
+    is_admin = user and user.id in ADMIN_IDS
+
+    admin_badge = "\n\n👑 **Вы авторизованы как Создатель проекта!** У вас пожизненный полный PRO-доступ без ограничений." if is_admin else ""
+
     text = (
         f"👋 **Привет, {user.first_name if user else 'друг'}!**\n\n"
         "Добро пожаловать в **Handwriter Studio** — профессиональный генератор рукописных конспектов и лекций.\n\n"
@@ -111,11 +130,12 @@ async def handle_start(message: Message):
         "• Превращает любой печатный текст в реалистичный рукописный почерк;\n"
         "• Движок «Живой руки»: дрожание строк, разный наклон букв и нажим чернил;\n"
         "• Развороты тетрадей в клетку, линейку или загрузка фото своей тетради;\n"
-        "• Моментальный экспорт в чистый многостраничный **PDF** или **ZIP**.\n\n"
+        "• Моментальный экспорт в чистый многостраничный **PDF** или **ZIP**."
+        f"{admin_badge}\n\n"
         "👇 Нажмите кнопку ниже, чтобы запустить приложение прямо в Telegram:"
     )
 
-    await message.answer(text, parse_mode="Markdown", reply_markup=get_webapp_keyboard())
+    await message.answer(text, parse_mode="Markdown", reply_markup=get_webapp_keyboard(user.id if user else None))
 
 
 @dp.message(Command("pro"))
@@ -206,3 +226,171 @@ async def generate_stars_invoice(user_id: int, plan_id: str) -> Optional[str]:
     except Exception as e:
         logger.error(f"Error creating invoice link: {e}")
         return None
+
+
+# ==========================================
+# 👑 АДМИН-ПАНЕЛЬ И КОМАНДЫ СОЗДАТЕЛЯ
+# ==========================================
+
+async def build_admin_text_and_keyboard():
+    stats = await get_admin_stats()
+    text = (
+        "👑 **Панель Управления Handwriter Studio**\n\n"
+        f"👥 Всего зарегистрировано пользователей: **{stats['total_users']}**\n"
+        f"⭐ Активных PRO-пользователей: **{stats['pro_users']}**\n"
+        f"💰 Всего заработано звёзд: **{stats['total_stars']} Stars**\n"
+        f"🧾 Успешных оплат: **{stats['total_payments']}**\n\n"
+        "🛠 **Быстрые команды администратора:**\n"
+        "• `/givepro <tg_id> [дней]` — выдать PRO (без дней или 0 = навсегда)\n"
+        "• `/revokepro <tg_id>` — забрать PRO\n"
+        "• `/broadcast <текст>` — сделать объявление/рассылку всем\n"
+        "• `/users` — посмотреть последних пользователей"
+    )
+    current_url = os.getenv("WEBAPP_URL", WEBAPP_URL)
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="🔄 Обновить статистику", callback_data="admin_refresh"),
+            InlineKeyboardButton(text="👥 Пользователи", callback_data="admin_users"),
+        ],
+        [
+            InlineKeyboardButton(text="✍️ Запустить Studio (PRO)", web_app=WebAppInfo(url=current_url)),
+        ]
+    ])
+    return text, kb
+
+
+@dp.message(Command("admin"))
+async def handle_admin_command(message: Message):
+    """Команда /admin для входа в панель управления."""
+    if message.from_user.id not in ADMIN_IDS:
+        await message.answer("⛔ У вас нет доступа к панели администратора.")
+        return
+    text, kb = await build_admin_text_and_keyboard()
+    await message.answer(text, parse_mode="Markdown", reply_markup=kb)
+
+
+@dp.callback_query(F.data.in_({"admin_dashboard", "admin_refresh"}))
+async def handle_admin_dashboard_callback(callback_query):
+    if callback_query.from_user.id not in ADMIN_IDS:
+        await callback_query.answer("⛔ Доступ запрещен.", show_alert=True)
+        return
+    text, kb = await build_admin_text_and_keyboard()
+    try:
+        await callback_query.message.edit_text(text, parse_mode="Markdown", reply_markup=kb)
+    except Exception:
+        pass
+    await callback_query.answer("Статистика обновлена!")
+
+
+@dp.callback_query(F.data == "admin_users")
+@dp.message(Command("users"))
+async def handle_admin_users(event):
+    user_id = event.from_user.id
+    if user_id not in ADMIN_IDS:
+        if isinstance(event, Message):
+            await event.answer("⛔ Доступ запрещен.")
+        else:
+            await event.answer("⛔ Доступ запрещен.", show_alert=True)
+        return
+
+    users = await get_all_users()
+    lines = ["👥 **Список пользователей (последние 20):**\n"]
+    for u in users[:20]:
+        status = "👑 Создатель" if u.telegram_id in ADMIN_IDS else ("⭐ PRO" if u.check_pro_active() else "Свободный")
+        u_name = f"@{u.username}" if u.username else (u.first_name or "Без имени")
+        lines.append(f"• `{u.telegram_id}` | {u_name} — **{status}**")
+
+    out_text = "\n".join(lines)
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="◀️ Назад в админку", callback_data="admin_dashboard")]
+    ])
+    if isinstance(event, Message):
+        await event.answer(out_text, parse_mode="Markdown", reply_markup=kb)
+    else:
+        try:
+            await event.message.edit_text(out_text, parse_mode="Markdown", reply_markup=kb)
+        except Exception:
+            pass
+        await event.answer()
+
+
+@dp.message(Command("givepro"))
+async def handle_give_pro(message: Message):
+    """Выдача PRO: /givepro <tg_id> [дней]"""
+    if message.from_user.id not in ADMIN_IDS:
+        await message.answer("⛔ Доступ запрещен.")
+        return
+
+    parts = message.text.strip().split()
+    if len(parts) < 2:
+        await message.answer("⚠️ Использование: `/givepro <telegram_id> [дней]`\nНапример: `/givepro 123456789 30` или `/givepro 123456789` (навсегда)", parse_mode="Markdown")
+        return
+
+    try:
+        target_id = int(parts[1])
+        days = int(parts[2]) if len(parts) > 2 else None
+    except ValueError:
+        await message.answer("❌ Ошибка: ID и дни должны быть числами.")
+        return
+
+    user = await admin_grant_pro(target_id, days)
+    dur_str = f"на {days} дней" if days else "НАВСЕГДА"
+    await message.answer(f"✅ Успешно! Пользователю `{target_id}` выдан PRO **{dur_str}**.", parse_mode="Markdown")
+
+
+@dp.message(Command("revokepro"))
+async def handle_revoke_pro(message: Message):
+    """Отзыв PRO: /revokepro <tg_id>"""
+    if message.from_user.id not in ADMIN_IDS:
+        await message.answer("⛔ Доступ запрещен.")
+        return
+
+    parts = message.text.strip().split()
+    if len(parts) < 2:
+        await message.answer("⚠️ Использование: `/revokepro <telegram_id>`", parse_mode="Markdown")
+        return
+
+    try:
+        target_id = int(parts[1])
+    except ValueError:
+        await message.answer("❌ Ошибка: ID должен быть числом.")
+        return
+
+    if target_id in ADMIN_IDS:
+        await message.answer("⚠️ Нельзя отозвать PRO у Создателя проекта.")
+        return
+
+    user = await admin_revoke_pro(target_id)
+    if not user:
+        await message.answer("❌ Пользователь не найден в базе.")
+        return
+
+    await message.answer(f"✅ PRO-статус у пользователя `{target_id}` отозван.", parse_mode="Markdown")
+
+
+@dp.message(Command("broadcast"))
+async def handle_broadcast(message: Message):
+    """Рассылка сообщения всем пользователям: /broadcast <текст>"""
+    if message.from_user.id not in ADMIN_IDS:
+        await message.answer("⛔ Доступ запрещен.")
+        return
+
+    text_to_send = message.text.replace("/broadcast", "", 1).strip()
+    if not text_to_send:
+        await message.answer("⚠️ Использование: `/broadcast Ваше сообщение здесь`", parse_mode="Markdown")
+        return
+
+    users = await get_all_users()
+    sent = 0
+    failed = 0
+    status_msg = await message.answer(f"⏳ Начинаю рассылку для {len(users)} пользователей...")
+
+    for u in users:
+        try:
+            await bot.send_message(u.telegram_id, text_to_send, parse_mode="Markdown")
+            sent += 1
+            await asyncio.sleep(0.05)  # Защита от лимитов Telegram
+        except Exception:
+            failed += 1
+
+    await status_msg.edit_text(f"📢 **Рассылка завершена!**\n\n✅ Успешно доставлено: {sent}\n❌ Ошибок / заблокировали бота: {failed}", parse_mode="Markdown")

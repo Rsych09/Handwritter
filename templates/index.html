@@ -144,6 +144,13 @@
 
         <!-- Studio Actions -->
         <div class="flex items-center gap-1.5 sm:gap-2.5">
+            <!-- Admin Dashboard Button (Only for Creator) -->
+            <button id="btnOpenAdmin" class="hidden px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer bg-gradient-to-r from-purple-500/25 via-indigo-500/20 to-purple-600/25 text-purple-300 border border-purple-500/60 hover:border-purple-400 shadow-[0_0_12px_rgba(168,85,247,0.2)] active:scale-95" title="Панель Создателя">
+                <i data-lucide="shield-check" class="w-3.5 h-3.5 text-purple-400"></i>
+                <span class="hidden sm:inline">Админка</span>
+                <span>👑</span>
+            </button>
+
             <!-- PRO Tariffs Button -->
             <button id="btnOpenTariffs" class="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer bg-gradient-to-r from-amber-500/20 via-yellow-500/15 to-amber-600/20 text-amber-300 border border-amber-500/50 hover:border-amber-400 shadow-sm active:scale-95">
                 <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-400"></i>
@@ -754,6 +761,83 @@
         </div>
     </div>
 
+    <!-- Admin Management Modal (Visible only to Creator/Admin) -->
+    <div id="adminModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4 hidden">
+        <div class="bg-[#121217] border border-purple-500/50 rounded-3xl max-w-2xl w-full p-5 sm:p-7 shadow-[0_0_50px_rgba(168,85,247,0.15)] relative max-h-[92vh] overflow-y-auto">
+            <!-- Close button -->
+            <button id="btnCloseAdmin" class="absolute top-4 right-4 text-zinc-400 hover:text-white p-2 rounded-xl bg-zinc-800/80 hover:bg-zinc-700 cursor-pointer transition-all">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+
+            <!-- Modal Header -->
+            <div class="text-center mb-5 sm:mb-6">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-400 text-xs font-semibold mb-2">
+                    <i data-lucide="shield-check" class="w-3.5 h-3.5 text-purple-400"></i> Панель Создателя
+                </div>
+                <h3 class="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center justify-center gap-2">
+                    Управление Studio <span>👑</span>
+                </h3>
+                <p class="text-zinc-400 text-xs mt-1">
+                    Полный доступ ко всей статистике, пользователям и выдаче подписок
+                </p>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-5 text-center">
+                <div class="bg-[#181820] p-3 rounded-2xl border border-zinc-800">
+                    <div class="text-zinc-400 text-[10px] uppercase font-bold tracking-wider mb-1">Всего польз.</div>
+                    <div id="adminStatUsers" class="text-lg sm:text-xl font-bold font-mono text-white">0</div>
+                </div>
+                <div class="bg-[#181820] p-3 rounded-2xl border border-zinc-800">
+                    <div class="text-amber-400 text-[10px] uppercase font-bold tracking-wider mb-1">PRO подписки</div>
+                    <div id="adminStatPro" class="text-lg sm:text-xl font-bold font-mono text-amber-300">0</div>
+                </div>
+                <div class="bg-[#181820] p-3 rounded-2xl border border-zinc-800">
+                    <div class="text-yellow-400 text-[10px] uppercase font-bold tracking-wider mb-1">Stars получено</div>
+                    <div id="adminStatStars" class="text-lg sm:text-xl font-bold font-mono text-yellow-300">0 ⭐</div>
+                </div>
+                <div class="bg-[#181820] p-3 rounded-2xl border border-zinc-800">
+                    <div class="text-emerald-400 text-[10px] uppercase font-bold tracking-wider mb-1">Оплат</div>
+                    <div id="adminStatPayments" class="text-lg sm:text-xl font-bold font-mono text-emerald-300">0</div>
+                </div>
+            </div>
+
+            <!-- Give PRO Action Section -->
+            <div class="bg-[#16161d] p-4 rounded-2xl border border-zinc-800/80 mb-5">
+                <label class="text-xs font-semibold text-zinc-300 flex items-center gap-1.5 mb-2.5">
+                    <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-400"></i> Ручная выдача PRO доступа
+                </label>
+                <div class="flex flex-col sm:flex-row gap-2 mb-2.5">
+                    <input id="adminTargetTgId" type="text" placeholder="Telegram ID пользователя" class="flex-1 bg-[#0f0f14] border border-zinc-700/80 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500 font-mono" />
+                    <select id="adminDurationSelect" class="bg-[#0f0f14] border border-zinc-700/80 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500">
+                        <option value="1">1 день</option>
+                        <option value="30">30 дней</option>
+                        <option value="0" selected>Навсегда (Lifetime)</option>
+                    </select>
+                    <button id="btnAdminGivePro" class="px-4 py-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-black font-semibold text-xs rounded-xl cursor-pointer transition-all active:scale-95">
+                        Выдать PRO
+                    </button>
+                </div>
+                <p class="text-[10px] text-zinc-500">Пользователь сразу получит полный доступ ко всем функциям без водяных знаков.</p>
+            </div>
+
+            <!-- Users List Section -->
+            <div class="bg-[#16161d] p-4 rounded-2xl border border-zinc-800/80">
+                <div class="flex items-center justify-between mb-3">
+                    <label class="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
+                        <i data-lucide="user" class="w-3.5 h-3.5 text-purple-400"></i> Зарегистрированные пользователи
+                    </label>
+                    <button id="btnAdminRefreshUsers" class="text-zinc-400 hover:text-white text-xs flex items-center gap-1 cursor-pointer">
+                        <i data-lucide="rotate-ccw" class="w-3 h-3"></i> Обновить
+                    </button>
+                </div>
+                <div id="adminUsersList" class="space-y-2 max-h-56 overflow-y-auto pr-1">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ==========================================
         // 🌟 TELEGRAM WEBAPP SDK & USER STATE
@@ -889,6 +973,7 @@
         function updateUserUI() {
             const headerBtn = document.getElementById('btnOpenTariffs');
             const headerStatus = document.getElementById('headerProStatus');
+            const btnOpenAdmin = document.getElementById('btnOpenAdmin');
             const modalUserName = document.getElementById('modalUserName');
             const modalUserStatusText = document.getElementById('modalUserStatusText');
             const modalStatusBadge = document.getElementById('modalStatusBadge');
@@ -897,7 +982,21 @@
                 modalUserName.innerText = currentUser.first_name || (currentUser.username ? `@${currentUser.username}` : 'Пользователь');
             }
 
-            if (currentUser.is_pro) {
+            if (currentUser.is_admin) {
+                if (btnOpenAdmin) btnOpenAdmin.classList.remove('hidden');
+                if (headerStatus) headerStatus.innerHTML = `<span class="text-amber-300 font-bold">👑 СОЗДАТЕЛЬ</span>`;
+                if (headerBtn) {
+                    headerBtn.className = "px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer bg-gradient-to-r from-purple-500/25 to-amber-500/25 text-amber-300 border border-amber-400/80 shadow-[0_0_12px_rgba(245,158,11,0.25)]";
+                }
+                if (modalUserStatusText) {
+                    modalUserStatusText.innerText = "Создатель проекта • Пожизненный полный PRO-доступ навсегда";
+                }
+                if (modalStatusBadge) {
+                    modalStatusBadge.className = "px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 font-mono text-[11px] font-bold border border-purple-500/40";
+                    modalStatusBadge.innerText = "CREATOR";
+                }
+            } else if (currentUser.is_pro) {
+                if (btnOpenAdmin) btnOpenAdmin.classList.add('hidden');
                 if (headerStatus) headerStatus.innerHTML = `<span class="text-amber-300 font-bold">👑 PRO</span>`;
                 if (headerBtn) {
                     headerBtn.className = "px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer bg-gradient-to-r from-amber-500/25 to-yellow-500/20 text-amber-300 border border-amber-400/80 shadow-[0_0_12px_rgba(245,158,11,0.25)]";
@@ -915,6 +1014,7 @@
                     modalStatusBadge.innerText = "PRO ACTIVE";
                 }
             } else {
+                if (btnOpenAdmin) btnOpenAdmin.classList.add('hidden');
                 if (headerStatus) headerStatus.innerText = "Тарифы ⭐";
                 if (modalUserStatusText) modalUserStatusText.innerText = "Бесплатный тариф (с водяным знаком)";
                 if (modalStatusBadge) {
@@ -1046,6 +1146,195 @@
         document.getElementById('tariffsModal')?.addEventListener('click', (e) => {
             if (e.target.id === 'tariffsModal') closeTariffsModal();
         });
+
+        // ==========================================
+        // 👑 ADMIN PANEL LOGIC (WEBAPP)
+        // ==========================================
+        const adminModal = document.getElementById('adminModal');
+        const btnOpenAdmin = document.getElementById('btnOpenAdmin');
+        const btnCloseAdmin = document.getElementById('btnCloseAdmin');
+        const btnAdminGivePro = document.getElementById('btnAdminGivePro');
+        const btnAdminRefreshUsers = document.getElementById('btnAdminRefreshUsers');
+        const adminTargetTgId = document.getElementById('adminTargetTgId');
+        const adminDurationSelect = document.getElementById('adminDurationSelect');
+        const adminUsersList = document.getElementById('adminUsersList');
+
+        async function openAdminModal() {
+            if (!currentUser.is_admin) {
+                showToast('Доступ только для Создателя', true);
+                return;
+            }
+            if (adminModal) adminModal.classList.remove('hidden');
+            if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+            await loadAdminStats();
+            await loadAdminUsers();
+        }
+
+        function closeAdminModal() {
+            if (adminModal) adminModal.classList.add('hidden');
+        }
+
+        async function loadAdminStats() {
+            try {
+                const initData = tg?.initData || '';
+                const res = await fetch('/api/admin/stats', {
+                    headers: { 'X-Telegram-Init-Data': initData }
+                });
+                if (!res.ok) return;
+                const stats = await res.json();
+                document.getElementById('adminStatUsers').innerText = stats.total_users || 0;
+                document.getElementById('adminStatPro').innerText = stats.pro_users || 0;
+                document.getElementById('adminStatStars').innerText = `${stats.total_stars || 0} ⭐`;
+                document.getElementById('adminStatPayments').innerText = stats.total_payments || 0;
+            } catch(e) {
+                console.warn('Error loading admin stats:', e);
+            }
+        }
+
+        async function loadAdminUsers() {
+            if (!adminUsersList) return;
+            try {
+                const initData = tg?.initData || '';
+                const res = await fetch('/api/admin/users', {
+                    headers: { 'X-Telegram-Init-Data': initData }
+                });
+                if (!res.ok) return;
+                const users = await res.json();
+                adminUsersList.innerHTML = '';
+
+                users.forEach(u => {
+                    const row = document.createElement('div');
+                    row.className = "flex items-center justify-between p-2.5 rounded-xl bg-[#0e0e13] border border-zinc-800 text-xs";
+                    
+                    const isAdm = u.is_admin;
+                    const isPro = u.is_pro;
+                    const statusBadge = isAdm
+                        ? `<span class="px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-300 font-semibold border border-purple-500/40 text-[10px]">Создатель</span>`
+                        : (isPro
+                            ? `<span class="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/40 text-[10px]">PRO</span>`
+                            : `<span class="px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-400 text-[10px]">Free</span>`);
+
+                    const name = u.first_name || (u.username ? `@${u.username}` : 'Аноним');
+                    
+                    let actionsHtml = '';
+                    if (!isAdm) {
+                        if (isPro) {
+                            actionsHtml = `<button class="btn-revoke px-2 py-1 rounded-lg bg-red-950/60 hover:bg-red-900 text-red-300 text-[10px] border border-red-800/60 cursor-pointer" data-id="${u.telegram_id}">Снять PRO</button>`;
+                        } else {
+                            actionsHtml = `<button class="btn-quick-pro px-2 py-1 rounded-lg bg-amber-950/60 hover:bg-amber-900 text-amber-300 text-[10px] border border-amber-800/60 cursor-pointer" data-id="${u.telegram_id}">Выдать</button>`;
+                        }
+                    }
+
+                    row.innerHTML = `
+                        <div class="flex items-center gap-2">
+                            <span class="font-mono text-zinc-400 text-[11px]">${u.telegram_id}</span>
+                            <span class="font-medium text-white">${name}</span>
+                            ${statusBadge}
+                        </div>
+                        <div>${actionsHtml}</div>
+                    `;
+
+                    adminUsersList.appendChild(row);
+                });
+
+                // Attach revoke handlers
+                adminUsersList.querySelectorAll('.btn-revoke').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        const targetId = parseInt(btn.dataset.id);
+                        if (!confirm(`Отозвать PRO у ${targetId}?`)) return;
+                        await revokePro(targetId);
+                    });
+                });
+
+                // Attach quick give pro handlers
+                adminUsersList.querySelectorAll('.btn-quick-pro').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        if (adminTargetTgId) adminTargetTgId.value = btn.dataset.id;
+                        givePro(parseInt(btn.dataset.id), 0);
+                    });
+                });
+
+            } catch(e) {
+                console.warn('Error loading admin users:', e);
+            }
+        }
+
+        async function givePro(targetId, days) {
+            try {
+                const initData = tg?.initData || '';
+                const res = await fetch('/api/admin/give-pro', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Telegram-Init-Data': initData
+                    },
+                    body: JSON.stringify({ telegram_id: targetId, days: days === 0 ? null : days })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showToast(data.message || 'PRO успешно выдан!');
+                    if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+                    await loadAdminStats();
+                    await loadAdminUsers();
+                } else {
+                    showToast(data.detail || 'Ошибка выдачи', true);
+                }
+            } catch(e) {
+                showToast('Ошибка при связи с сервером', true);
+            }
+        }
+
+        async function revokePro(targetId) {
+            try {
+                const initData = tg?.initData || '';
+                const res = await fetch('/api/admin/revoke-pro', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Telegram-Init-Data': initData
+                    },
+                    body: JSON.stringify({ telegram_id: targetId })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showToast(data.message || 'PRO отозван');
+                    await loadAdminStats();
+                    await loadAdminUsers();
+                } else {
+                    showToast(data.detail || 'Ошибка отзыва', true);
+                }
+            } catch(e) {
+                showToast('Ошибка при связи с сервером', true);
+            }
+        }
+
+        if (btnOpenAdmin) btnOpenAdmin.addEventListener('click', openAdminModal);
+        if (btnCloseAdmin) btnCloseAdmin.addEventListener('click', closeAdminModal);
+        if (adminModal) {
+            adminModal.addEventListener('click', (e) => {
+                if (e.target.id === 'adminModal') closeAdminModal();
+            });
+        }
+        if (btnAdminRefreshUsers) {
+            btnAdminRefreshUsers.addEventListener('click', async () => {
+                await loadAdminStats();
+                await loadAdminUsers();
+                showToast('Обновлено');
+            });
+        }
+        if (btnAdminGivePro) {
+            btnAdminGivePro.addEventListener('click', async () => {
+                const rawId = adminTargetTgId?.value?.trim();
+                if (!rawId || isNaN(rawId)) {
+                    showToast('Введите корректный Telegram ID', true);
+                    return;
+                }
+                const targetId = parseInt(rawId);
+                const days = parseInt(adminDurationSelect?.value || '0');
+                await givePro(targetId, days);
+                if (adminTargetTgId) adminTargetTgId.value = '';
+            });
+        }
 
         // Mobile Navigation Handler
         const sidebarPanel = document.getElementById('sidebarPanel');

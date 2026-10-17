@@ -25,7 +25,16 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from PIL import Image
 
-from database import init_db, get_or_create_user, AsyncSessionLocal
+from database import (
+    init_db,
+    get_or_create_user,
+    AsyncSessionLocal,
+    ADMIN_IDS,
+    get_admin_stats,
+    admin_grant_pro,
+    admin_revoke_pro,
+    get_all_users,
+)
 from auth import validate_telegram_init_data
 from bot import bot, dp, PLANS, generate_stars_invoice
 
@@ -280,6 +289,7 @@ async def get_user_status(
                 first_name=user_info.get("first_name"),
             )
             is_pro = user.check_pro_active()
+            is_admin = user.telegram_id in ADMIN_IDS
             return JSONResponse({
                 "authenticated": True,
                 "user": {
@@ -287,6 +297,7 @@ async def get_user_status(
                     "first_name": user.first_name or "Пользователь",
                     "username": user.username,
                     "is_pro": is_pro,
+                    "is_admin": is_admin,
                     "pro_expires_at": user.pro_expires_at.isoformat() if user.pro_expires_at else None,
                     "stars_spent": user.stars_spent,
                 }
@@ -300,9 +311,92 @@ async def get_user_status(
             "first_name": "Гость",
             "username": None,
             "is_pro": False,
+            "is_admin": False,
             "pro_expires_at": None,
             "stars_spent": 0,
         }
+    })
+
+
+# ==========================================
+# 👑 REST API АДМИНИСТРАТОРА
+# ==========================================
+
+class AdminGiveProRequest(BaseModel):
+    telegram_id: int
+    days: Optional[int] = None
+
+
+class AdminRevokeProRequest(BaseModel):
+    telegram_id: int
+
+
+def verify_admin_request(x_telegram_init_data: Optional[str]) -> int:
+    if not x_telegram_init_data:
+        raise HTTPException(status_code=401, detail="Требуется авторизация Telegram WebApp.")
+    user_info = validate_telegram_init_data(x_telegram_init_data)
+    if not user_info or user_info.get("id") not in ADMIN_IDS:
+        raise HTTPException(status_code=403, detail="Доступ разрешен только Создателю / Администратору.")
+    return user_info["id"]
+
+
+@app.get("/api/admin/stats")
+async def admin_stats_api(x_telegram_init_data: Optional[str] = Header(None)):
+    verify_admin_request(x_telegram_init_data)
+    stats = await get_admin_stats()
+    return JSONResponse(stats)
+
+
+@app.get("/api/admin/users")
+async def admin_users_api(x_telegram_init_data: Optional[str] = Header(None)):
+    verify_admin_request(x_telegram_init_data)
+    users = await get_all_users()
+    data = []
+    for u in users:
+        data.append({
+            "id": u.id,
+            "telegram_id": u.telegram_id,
+            "username": u.username,
+            "first_name": u.first_name,
+            "is_pro": u.check_pro_active(),
+            "is_admin": u.telegram_id in ADMIN_IDS,
+            "pro_expires_at": u.pro_expires_at.isoformat() if u.pro_expires_at else None,
+            "stars_spent": u.stars_spent,
+            "created_at": u.created_at.isoformat() if u.created_at else None,
+        })
+    return JSONResponse(data)
+
+
+@app.post("/api/admin/give-pro")
+async def admin_give_pro_api(
+    payload: AdminGiveProRequest,
+    x_telegram_init_data: Optional[str] = Header(None),
+):
+    verify_admin_request(x_telegram_init_data)
+    user = await admin_grant_pro(payload.telegram_id, payload.days)
+    return JSONResponse({
+        "success": True,
+        "message": f"PRO успешно выдан пользователю {payload.telegram_id}",
+        "user": {
+            "telegram_id": user.telegram_id,
+            "is_pro": user.is_pro,
+            "pro_expires_at": user.pro_expires_at.isoformat() if user.pro_expires_at else None
+        }
+    })
+
+
+@app.post("/api/admin/revoke-pro")
+async def admin_revoke_pro_api(
+    payload: AdminRevokeProRequest,
+    x_telegram_init_data: Optional[str] = Header(None),
+):
+    verify_admin_request(x_telegram_init_data)
+    user = await admin_revoke_pro(payload.telegram_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+    return JSONResponse({
+        "success": True,
+        "message": f"PRO отозван у пользователя {payload.telegram_id}",
     })
 
 

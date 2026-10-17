@@ -16,6 +16,15 @@ from sqlalchemy.orm import declarative_base, relationship
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./handwriter.db")
 
+# Список ID администраторов (по умолчанию 1109865120)
+ADMIN_IDS = {1109865120}
+_admin_env = os.getenv("ADMIN_IDS", "")
+if _admin_env:
+    for _aid in _admin_env.split(","):
+        _aid = _aid.strip()
+        if _aid.isdigit():
+            ADMIN_IDS.add(int(_aid))
+
 engine = create_async_engine(DATABASE_URL, echo=False)
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 Base = declarative_base()
@@ -36,7 +45,9 @@ class User(Base):
     payments = relationship("Payment", back_populates="user", cascade="all, delete-orphan")
 
     def check_pro_active(self) -> bool:
-        """Проверяет, активен ли PRO-статус."""
+        """Проверяет, активен ли PRO-статус (для администратора всегда True)."""
+        if self.telegram_id in ADMIN_IDS:
+            return True
         if not self.is_pro:
             return False
         # Если дата окончания не установлена (None) — это вечная подписка (Lifetime)
@@ -48,6 +59,10 @@ class User(Base):
         if expires.tzinfo is None:
             expires = expires.replace(tzinfo=timezone.utc)
         return expires > now
+
+    @property
+    def is_admin(self) -> bool:
+        return self.telegram_id in ADMIN_IDS
 
 
 class Payment(Base):
@@ -82,19 +97,24 @@ async def get_or_create_user(
         user = result.scalars().first()
 
         if not user:
+            is_adm = telegram_id in ADMIN_IDS
             user = User(
                 telegram_id=telegram_id,
                 username=username,
                 first_name=first_name,
-                is_pro=False,
+                is_pro=is_adm,
                 pro_expires_at=None,
             )
             session.add(user)
             await session.commit()
             await session.refresh(user)
         else:
-            # Обновим имя / username если изменились
             updated = False
+            # Если это администратор, гарантируем активный PRO навсегда
+            if telegram_id in ADMIN_IDS and not user.is_pro:
+                user.is_pro = True
+                user.pro_expires_at = None
+                updated = True
             if username and user.username != username:
                 user.username = username
                 updated = True
@@ -164,3 +184,79 @@ async def apply_payment_subscription(
         await session.commit()
         await session.refresh(user)
         return True, user
+
+
+async def get_admin_stats() -> dict:
+    """Возвращает сводную статистику для админ-панели."""
+    async with AsyncSessionLocal() as session:
+        users_res = await session.execute(select(User))
+        all_users = users_res.scalars().all()
+
+        total_users = len(all_users)
+        pro_users = sum(1 for u in all_users if u.check_pro_active())
+        total_stars = sum(u.stars_spent for u in all_users)
+
+        payments_res = await session.execute(select(Payment))
+        all_payments = payments_res.scalars().all()
+
+        return {
+            "total_users": total_users,
+            "pro_users": pro_users,
+            "total_stars": total_stars,
+            "total_payments": len(all_payments),
+        }
+
+
+async def admin_grant_pro(telegram_id: int, duration_days: Optional[int] = None) -> Optional[User]:
+    """Выдача PRO пользователю вручную администратором."""
+    async with AsyncSessionLocal() as session:
+        res = await session.execute(select(User).where(User.telegram_id == telegram_id))
+        user = res.scalars().first()
+        if not user:
+            user = User(telegram_id=telegram_id)
+            session.add(user)
+            await session.flush()
+
+        user.is_pro = True
+        if duration_days is None or duration_days <= 0:
+            user.pro_expires_at = None  # Навсегда
+        else:
+            now = datetime.now(timezone.utc)
+            user.pro_expires_at = now + timedelta(days=duration_days)
+
+        await session.commit()
+        await session.refresh(user)
+        return user
+
+
+async def admin_revoke_pro(telegram_id: int) -> Optional[User]:
+    """Отзыв PRO-статуса у пользователя."""
+    async with AsyncSessionLocal() as session:
+        res = await session.execute(select(User).where(User.telegram_id == telegram_id))
+        user = res.scalars().first()
+        if not user:
+            return None
+
+        # Создателя/админа нельзя лишить PRO
+        if user.telegram_id in ADMIN_IDS:
+            return user
+
+        user.is_pro = False
+        user.pro_expires_at = None
+        await session.commit()
+        await session.refresh(user)
+        return user
+
+
+async def get_all_users() -> list:
+    """Получение списка всех пользователей для админки."""
+    async with AsyncSessionLocal() as session:
+        res = await session.execute(select(User).order_by(User.id.desc()))
+        return res.scalars().all()
+
+
+async def get_recent_payments(limit: int = 10) -> list:
+    """Получение последних транзакций."""
+    async with AsyncSessionLocal() as session:
+        res = await session.execute(select(Payment).order_by(Payment.id.desc()).limit(limit))
+        return res.scalars().all()
