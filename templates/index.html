@@ -12,6 +12,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <!-- jsPDF for PDF export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Telegram WebApp SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     
     <style>
         @font-face {
@@ -86,29 +88,26 @@
 <body class="bg-[#09090b] text-[#ededef] font-sans h-screen flex flex-col overflow-hidden antialiased select-none">
 
     <!-- Top Studio Navigation Bar -->
-    <header class="bg-[#0f0f12]/95 backdrop-blur-lg px-6 py-3 flex justify-between items-center z-30 border-b border-zinc-800/80 shrink-0">
+    <header class="bg-[#0f0f12]/95 backdrop-blur-lg px-3 sm:px-6 py-2.5 sm:py-3 flex justify-between items-center z-30 border-b border-zinc-800/80 shrink-0">
         <!-- Studio Brand -->
-        <div class="flex items-center gap-3.5">
+        <div class="flex items-center gap-2.5 sm:gap-3.5">
             <!-- Monogram / Icon -->
-            <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-zinc-800 to-zinc-950 flex items-center justify-center text-amber-300/90 shadow-md border border-zinc-700/50">
+            <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-zinc-800 to-zinc-950 flex items-center justify-center text-amber-300/90 shadow-md border border-zinc-700/50">
                 <i data-lucide="pen-tool" class="w-4 h-4"></i>
             </div>
             <div>
-                <div class="flex items-center gap-2.5">
-                    <div class="flex items-baseline gap-1.5">
-                        <span class="text-sm font-bold tracking-tight text-white uppercase font-mono">HANDWRITER</span>
-                        <span class="text-[10px] tracking-[0.25em] font-semibold text-amber-400 uppercase">STUDIO</span>
+                <div class="flex items-center gap-2">
+                    <div class="flex items-baseline gap-1">
+                        <span class="text-xs sm:text-sm font-bold tracking-tight text-white uppercase font-mono">HANDWRITER</span>
+                        <span class="text-[9px] sm:text-[10px] tracking-[0.2em] font-semibold text-amber-400 uppercase">STUDIO</span>
                     </div>
-                    <span class="text-[9px] font-semibold tracking-wider bg-zinc-800/80 text-zinc-300 border border-zinc-700/60 px-2 py-0.5 rounded-full uppercase">
-                        PRO EDITION
-                    </span>
                 </div>
-                <p class="text-[11px] text-zinc-400 tracking-normal">Профессиональный генератор рукописных конспектов</p>
+                <p class="text-[10px] sm:text-[11px] text-zinc-400 tracking-normal hidden sm:block">Генератор рукописных конспектов</p>
             </div>
         </div>
 
         <!-- Live Statistics Chips -->
-        <div class="hidden md:flex items-center gap-3 bg-[#141418] px-4 py-1.5 rounded-full border border-zinc-800/90 text-xs">
+        <div class="hidden lg:flex items-center gap-3 bg-[#141418] px-4 py-1.5 rounded-full border border-zinc-800/90 text-xs">
             <div class="flex items-center gap-1.5 text-zinc-300">
                 <i data-lucide="layers" class="w-3.5 h-3.5 text-amber-400"></i>
                 Листов: <span id="statPages" class="font-mono font-bold text-white">1</span>
@@ -131,21 +130,28 @@
         </div>
 
         <!-- Studio Actions -->
-        <div class="flex items-center gap-2.5">
-            <button id="btnResetAll" class="px-3 py-2 rounded-xl text-xs font-medium text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60 transition-all cursor-pointer flex items-center gap-1.5" title="Сбросить все настройки к начальным">
+        <div class="flex items-center gap-1.5 sm:gap-2.5">
+            <!-- PRO Tariffs Button -->
+            <button id="btnOpenTariffs" class="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer bg-gradient-to-r from-amber-500/20 via-yellow-500/15 to-amber-600/20 text-amber-300 border border-amber-500/50 hover:border-amber-400 shadow-sm active:scale-95">
+                <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-400"></i>
+                <span id="headerProStatus">Тарифы ⭐</span>
+            </button>
+
+            <button id="btnResetAll" class="hidden md:flex px-2.5 py-2 rounded-xl text-xs font-medium text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60 transition-all cursor-pointer items-center gap-1.5" title="Сбросить все настройки к начальным">
                 <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
                 <span class="hidden sm:inline">Сброс</span>
             </button>
 
-            <button id="btnDownloadZip" class="px-3.5 py-2 rounded-xl text-xs font-medium text-zinc-200 bg-[#16161a] hover:bg-[#1f2026] active:scale-98 transition-all cursor-pointer flex items-center gap-2 border border-zinc-700/60 shadow-sm">
-                <i data-lucide="archive" class="w-4 h-4 text-zinc-400"></i>
+            <button id="btnDownloadZip" class="hidden sm:flex px-3 py-2 rounded-xl text-xs font-medium text-zinc-200 bg-[#16161a] hover:bg-[#1f2026] active:scale-98 transition-all cursor-pointer items-center gap-1.5 border border-zinc-700/60 shadow-sm">
+                <i data-lucide="archive" class="w-3.5 h-3.5 text-zinc-400"></i>
                 <span>.ZIP</span>
             </button>
 
             <!-- Titanium White Stark Action Button -->
-            <button id="btnDownloadPdf" class="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-950 bg-zinc-100 hover:bg-white active:scale-98 transition-all cursor-pointer flex items-center gap-2 shadow-[0_1px_3px_rgba(0,0,0,0.4)]">
-                <i data-lucide="file-down" class="w-4 h-4"></i>
-                <span>Экспорт в PDF</span>
+            <button id="btnDownloadPdf" class="px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-semibold text-zinc-950 bg-zinc-100 hover:bg-white active:scale-98 transition-all cursor-pointer flex items-center gap-1.5 sm:gap-2 shadow-[0_1px_3px_rgba(0,0,0,0.4)]">
+                <i data-lucide="file-down" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+                <span class="hidden sm:inline">Экспорт в PDF</span>
+                <span class="sm:hidden">PDF</span>
             </button>
         </div>
     </header>
@@ -154,7 +160,7 @@
     <div class="flex flex-1 overflow-hidden relative">
 
         <!-- Left Controls Sidebar -->
-        <aside class="w-[430px] bg-[#0f0f12] flex flex-col border-r border-zinc-800/80 z-20 shrink-0 select-text">
+        <aside id="sidebarPanel" class="w-full md:w-[430px] bg-[#0f0f12] flex flex-col border-r border-zinc-800/80 z-20 shrink-0 select-text">
             
             <!-- Tabs Header -->
             <div class="flex border-b border-zinc-800/80 bg-[#0a0a0d] text-xs font-medium shrink-0">
@@ -211,7 +217,24 @@
                     <!-- Editorial Tip Card -->
                     <div class="p-3.5 rounded-xl bg-[#141418] border border-zinc-800 text-xs text-zinc-400 flex items-start gap-2.5">
                         <i data-lucide="info" class="w-4 h-4 text-amber-400 shrink-0 mt-0.5"></i>
-                        <span>Текст форматируется автоматически с учетом книжных полей тетради. Четные и нечетные листы размещаются в соответствии с переплетом.</span>
+                        <span>Текст форматируется автоматически с учетом полей тетради. Листы генерируются в реальном времени.</span>
+                    </div>
+
+                    <!-- Live Handwritten Preview under text on mobile / main screen -->
+                    <div id="inlinePreviewSection" class="pt-3 space-y-3.5">
+                        <div class="flex items-center justify-between px-1">
+                            <label class="text-[11px] font-semibold text-zinc-300 uppercase tracking-widest flex items-center gap-2">
+                                <i data-lucide="book-open" class="w-3.5 h-3.5 text-amber-400"></i> Рукописный результат
+                            </label>
+                            <span id="inlinePagesCount" class="text-[10px] font-mono text-zinc-400 bg-zinc-800/90 px-2.5 py-0.5 rounded-full border border-zinc-700/60">
+                                1 лист
+                            </span>
+                        </div>
+
+                        <!-- Canvases rendered on mobile screen -->
+                        <div id="inlineCanvasContainer" class="flex flex-col items-center gap-6 pb-6">
+                            <!-- Cards will be populated here -->
+                        </div>
                     </div>
                 </div>
 
@@ -563,7 +586,7 @@
             </div>
 
             <!-- Sidebar Footer Quick Info -->
-            <div class="p-3 bg-[#0a0a0d] border-t border-zinc-800 text-[11px] text-zinc-500 flex justify-between items-center shrink-0">
+            <div class="hidden md:flex p-3 bg-[#0a0a0d] border-t border-zinc-800 text-[11px] text-zinc-500 justify-between items-center shrink-0">
                 <span class="font-mono text-[10px] tracking-wider text-zinc-400">HANDWRITER STUDIO</span>
                 <span class="flex items-center gap-1 text-zinc-400">
                     <kbd class="px-1.5 py-0.5 text-[10px] bg-zinc-800 rounded border border-zinc-700 text-zinc-300 font-mono">Ctrl</kbd>+<kbd class="px-1.5 py-0.5 text-[10px] bg-zinc-800 rounded border border-zinc-700 text-zinc-300 font-mono">Enter</kbd>
@@ -572,21 +595,21 @@
         </aside>
 
         <!-- Right Main Drafting / Preview Area -->
-        <main class="flex-1 flex flex-col bg-[#070709] overflow-hidden relative">
+        <main id="previewPanel" class="flex-1 flex flex-col bg-[#070709] overflow-hidden relative hidden md:flex">
 
             <!-- Studio Viewport Toolbar -->
-            <div class="px-6 py-2.5 bg-[#0f0f12]/90 backdrop-blur-md border-b border-zinc-800/80 flex items-center justify-between shrink-0 z-10">
+            <div class="px-3 sm:px-6 py-2 sm:py-2.5 bg-[#0f0f12]/90 backdrop-blur-md border-b border-zinc-800/80 flex items-center justify-between shrink-0 z-10">
                 <!-- View Mode Segmented Control -->
                 <div class="flex items-center gap-1 bg-[#141418] p-1 rounded-xl border border-zinc-800">
-                    <button id="viewSpreadBtn" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 text-zinc-100 shadow-sm flex items-center gap-1.5 cursor-pointer transition-colors" title="Режим разворота тетради">
+                    <button id="viewSpreadBtn" class="px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 text-zinc-100 shadow-sm flex items-center gap-1.5 cursor-pointer transition-colors" title="Режим разворота тетради">
                         <i data-lucide="book-open" class="w-3.5 h-3.5 text-amber-400"></i>
                         <span>Разворот</span>
                     </button>
-                    <button id="viewListBtn" class="px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-400 hover:text-zinc-200 flex items-center gap-1.5 cursor-pointer transition-colors" title="Лента страниц в столбик">
+                    <button id="viewListBtn" class="px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-400 hover:text-zinc-200 flex items-center gap-1.5 cursor-pointer transition-colors" title="Лента страниц в столбик">
                         <i data-lucide="columns-2" class="w-3.5 h-3.5"></i>
                         <span>Лента</span>
                     </button>
-                    <button id="viewGridBtn" class="px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-400 hover:text-zinc-200 flex items-center gap-1.5 cursor-pointer transition-colors" title="Сетка страниц">
+                    <button id="viewGridBtn" class="hidden sm:flex px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-400 hover:text-zinc-200 items-center gap-1.5 cursor-pointer transition-colors" title="Сетка страниц">
                         <i data-lucide="grid" class="w-3.5 h-3.5"></i>
                         <span>Сетка</span>
                     </button>
@@ -598,7 +621,7 @@
                         <button id="btnZoomOut" class="p-1.5 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white cursor-pointer" title="Уменьшить">
                             <i data-lucide="minus" class="w-3.5 h-3.5"></i>
                         </button>
-                        <span id="zoomLevelDisplay" class="px-2 font-mono font-bold text-zinc-200">100%</span>
+                        <span id="zoomLevelDisplay" class="px-1.5 sm:px-2 font-mono font-bold text-zinc-200 text-[11px] sm:text-xs">100%</span>
                         <button id="btnZoomIn" class="p-1.5 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white cursor-pointer" title="Увеличить">
                             <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                         </button>
@@ -610,14 +633,14 @@
             </div>
 
             <!-- Canvas Scroll Container (Architectural Drafting Surface) -->
-            <div id="viewportContainer" class="flex-1 overflow-auto p-10 flex flex-col items-center bg-[radial-gradient(#1c1c22_1px,transparent_1px)] [background-size:20px_20px]">
-                <div id="canvasContainer" class="flex flex-col items-center gap-12 transition-transform origin-top duration-150">
+            <div id="viewportContainer" class="flex-1 overflow-auto p-4 sm:p-10 flex flex-col items-center bg-[radial-gradient(#1c1c22_1px,transparent_1px)] [background-size:20px_20px]">
+                <div id="canvasContainer" class="flex flex-col items-center gap-6 sm:gap-12 transition-transform origin-top duration-150">
                     <!-- Canvases are rendered here -->
                 </div>
             </div>
 
             <!-- Studio Toast Notification -->
-            <div id="toast" class="fixed bottom-6 right-6 bg-[#18181c]/95 border border-zinc-700/80 text-zinc-100 px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 transform translate-y-20 opacity-0 transition-all duration-300 z-50 pointer-events-none backdrop-blur-md">
+            <div id="toast" class="fixed bottom-16 md:bottom-6 right-4 sm:right-6 bg-[#18181c]/95 border border-zinc-700/80 text-zinc-100 px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 transform translate-y-20 opacity-0 transition-all duration-300 z-50 pointer-events-none backdrop-blur-md">
                 <div id="toastIcon" class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
                     <i data-lucide="check" class="w-3.5 h-3.5"></i>
                 </div>
@@ -627,9 +650,336 @@
         </main>
     </div>
 
+    <!-- Mobile Bottom Navigation Bar (Telegram Friendly) -->
+    <nav class="md:hidden bg-[#0f0f12]/95 backdrop-blur-lg border-t border-zinc-800/80 px-2 py-1.5 flex justify-around items-center z-30 shrink-0 select-none">
+        <button id="mobileNavText" class="flex-1 py-1.5 flex flex-col items-center gap-1 text-amber-400 text-[10px] font-semibold transition-all">
+            <i data-lucide="edit-3" class="w-4 h-4"></i>
+            <span>Текст</span>
+        </button>
+        <button id="mobileNavSettings" class="flex-1 py-1.5 flex flex-col items-center gap-1 text-zinc-400 hover:text-zinc-200 text-[10px] font-medium transition-all">
+            <i data-lucide="sliders" class="w-4 h-4"></i>
+            <span>Параметры</span>
+        </button>
+        <button id="mobileNavPreview" class="flex-1 py-1.5 flex flex-col items-center gap-1 text-zinc-400 hover:text-zinc-200 text-[10px] font-medium transition-all relative">
+            <i data-lucide="book-open" class="w-4 h-4"></i>
+            <span>Лист</span>
+        </button>
+        <button id="mobileNavTariffs" class="flex-1 py-1.5 flex flex-col items-center gap-1 text-amber-300 hover:text-amber-200 text-[10px] font-semibold transition-all">
+            <i data-lucide="sparkles" class="w-4 h-4 text-amber-400"></i>
+            <span>PRO ⭐</span>
+        </button>
+    </nav>
+
+    <!-- Tariffs Modal (Telegram Stars) -->
+    <div id="tariffsModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4 hidden">
+        <div class="bg-[#121217] border border-zinc-700/80 rounded-3xl max-w-2xl w-full p-5 sm:p-7 shadow-2xl relative max-h-[92vh] overflow-y-auto">
+            <!-- Close button -->
+            <button id="btnCloseTariffs" class="absolute top-4 right-4 text-zinc-400 hover:text-white p-2 rounded-xl bg-zinc-800/80 hover:bg-zinc-700 cursor-pointer transition-all">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+
+            <!-- Modal Header -->
+            <div class="text-center mb-5 sm:mb-6">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold mb-2.5">
+                    <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Telegram Stars Payments
+                </div>
+                <h3 class="text-xl sm:text-2xl font-bold text-white tracking-tight">Handwriter Studio PRO</h3>
+                <p class="text-zinc-400 text-xs mt-1 max-w-md mx-auto">
+                    Оплачивайте прямо внутри Telegram нативными звёздами. Моментальная активация без банковских карт!
+                </p>
+            </div>
+
+            <!-- Current user status card -->
+            <div id="userProStatusCard" class="mb-5 p-3.5 rounded-2xl bg-zinc-900/90 border border-zinc-800 flex items-center justify-between text-xs">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-zinc-800 flex items-center justify-center text-amber-400 border border-zinc-700/50">
+                        <i data-lucide="user" class="w-4 h-4"></i>
+                    </div>
+                    <div>
+                        <div id="modalUserName" class="font-semibold text-white">Гость</div>
+                        <div id="modalUserStatusText" class="text-zinc-400 text-[11px]">Бесплатный режим</div>
+                    </div>
+                </div>
+                <div id="modalStatusBadge" class="px-3 py-1 rounded-full bg-zinc-800 text-zinc-300 font-mono text-[11px] font-semibold border border-zinc-700">
+                    FREE
+                </div>
+            </div>
+
+            <!-- Plans Cards Grid -->
+            <div id="plansGrid" class="grid grid-cols-1 md:grid-cols-3 gap-3.5 mb-5">
+                <!-- Will be dynamically populated with tariffs from /api/plans -->
+            </div>
+
+            <!-- Benefits Footer -->
+            <div class="p-3.5 rounded-2xl bg-[#0a0a0e] border border-zinc-800/80 text-[11px] text-zinc-400 space-y-1">
+                <div class="flex items-center gap-2 text-zinc-300 font-medium">
+                    <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i>
+                    Безопасная оплата через Telegram
+                </div>
+                <p>Все права и подписки привязываются к вашему аккаунту Telegram. Доступны на телефоне, планшете и ПК.</p>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Initialize Lucide Icons
         lucide.createIcons();
+
+        // ==========================================
+        // 🌟 TELEGRAM WEBAPP SDK & USER STATE
+        // ==========================================
+        const tg = window.Telegram?.WebApp;
+        if (tg) {
+            try {
+                tg.ready();
+                tg.expand();
+                if (tg.setHeaderColor) tg.setHeaderColor('#0f0f12');
+                if (tg.setBackgroundColor) tg.setBackgroundColor('#09090b');
+            } catch(e) {
+                console.warn('Telegram WebApp init warning:', e);
+            }
+        }
+
+        let currentUser = {
+            authenticated: false,
+            telegram_id: 0,
+            first_name: 'Гость',
+            username: null,
+            is_pro: false,
+            pro_expires_at: null,
+            stars_spent: 0
+        };
+
+        let availablePlans = [];
+
+        async function fetchUserStatus() {
+            try {
+                const initData = tg?.initData || '';
+                const res = await fetch('/api/user-status', {
+                    headers: { 'X-Telegram-Init-Data': initData }
+                });
+                const data = await res.json();
+                if (data && data.user) {
+                    currentUser = data.user;
+                    updateUserUI();
+                }
+            } catch (err) {
+                console.error('Error fetching user status:', err);
+            }
+        }
+
+        function updateUserUI() {
+            const headerBtn = document.getElementById('btnOpenTariffs');
+            const headerStatus = document.getElementById('headerProStatus');
+            const modalUserName = document.getElementById('modalUserName');
+            const modalUserStatusText = document.getElementById('modalUserStatusText');
+            const modalStatusBadge = document.getElementById('modalStatusBadge');
+
+            if (modalUserName) {
+                modalUserName.innerText = currentUser.first_name || (currentUser.username ? `@${currentUser.username}` : 'Пользователь');
+            }
+
+            if (currentUser.is_pro) {
+                if (headerStatus) headerStatus.innerHTML = `<span class="text-amber-300 font-bold">👑 PRO</span>`;
+                if (headerBtn) {
+                    headerBtn.className = "px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer bg-gradient-to-r from-amber-500/25 to-yellow-500/20 text-amber-300 border border-amber-400/80 shadow-[0_0_12px_rgba(245,158,11,0.25)]";
+                }
+                if (modalUserStatusText) {
+                    if (currentUser.pro_expires_at) {
+                        const dateStr = new Date(currentUser.pro_expires_at).toLocaleDateString('ru-RU');
+                        modalUserStatusText.innerText = `Подписка активна до ${dateStr}`;
+                    } else {
+                        modalUserStatusText.innerText = `Вечный доступ (VIP Lifetime)`;
+                    }
+                }
+                if (modalStatusBadge) {
+                    modalStatusBadge.className = "px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 font-mono text-[11px] font-bold border border-amber-500/40";
+                    modalStatusBadge.innerText = "PRO ACTIVE";
+                }
+            } else {
+                if (headerStatus) headerStatus.innerText = "Тарифы ⭐";
+                if (modalUserStatusText) modalUserStatusText.innerText = "Бесплатный тариф (с водяным знаком)";
+                if (modalStatusBadge) {
+                    modalStatusBadge.className = "px-3 py-1 rounded-full bg-zinc-800 text-zinc-400 font-mono text-[11px] font-semibold border border-zinc-700";
+                    modalStatusBadge.innerText = "FREE";
+                }
+            }
+        }
+
+        async function loadPlansList() {
+            try {
+                const res = await fetch('/api/plans');
+                availablePlans = await res.json();
+                renderPlans();
+            } catch (err) {
+                console.error('Error loading plans:', err);
+            }
+        }
+
+        function renderPlans() {
+            const plansGrid = document.getElementById('plansGrid');
+            if (!plansGrid) return;
+            plansGrid.innerHTML = '';
+
+            availablePlans.forEach(plan => {
+                const card = document.createElement('div');
+                const isPopular = plan.is_popular;
+                card.className = `p-4 rounded-2xl flex flex-col justify-between transition-all relative ${
+                    isPopular 
+                    ? 'bg-gradient-to-b from-[#1c1c24] to-[#14141a] border-2 border-amber-500/80 shadow-[0_0_20px_rgba(245,158,11,0.15)] ring-1 ring-amber-500/30' 
+                    : 'bg-[#0f0f13] border border-zinc-800 hover:border-zinc-700'
+                }`;
+
+                card.innerHTML = `
+                    <div>
+                        ${plan.badge ? `<span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider mb-2.5 ${isPopular ? 'bg-amber-500 text-zinc-950 font-bold' : 'bg-zinc-800 text-zinc-300'}">${plan.badge}</span>` : ''}
+                        <h4 class="text-sm font-bold text-white mb-1">${plan.name}</h4>
+                        <div class="flex items-baseline gap-1 my-2.5">
+                            <span class="text-2xl font-black text-amber-400 tracking-tight">${plan.stars}</span>
+                            <span class="text-xs font-semibold text-amber-300/80">⭐ Stars</span>
+                        </div>
+                        <p class="text-zinc-400 text-[11px] leading-relaxed mb-3">${plan.description}</p>
+                        <ul class="space-y-1.5 text-[11px] text-zinc-300 mb-4">
+                            ${(plan.features || []).map(f => `
+                                <li class="flex items-center gap-1.5">
+                                    <i data-lucide="check" class="w-3.5 h-3.5 text-amber-400 shrink-0"></i>
+                                    <span>${f}</span>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                    <button class="btn-buy-plan w-full py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-sm active:scale-95 ${
+                        isPopular
+                        ? 'bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-zinc-950 shadow-[0_2px_10px_rgba(245,158,11,0.3)]'
+                        : 'bg-zinc-800 hover:bg-zinc-700 text-white'
+                    }" data-plan="${plan.id}">
+                        <span>Купить за ${plan.stars} ⭐</span>
+                    </button>
+                `;
+
+                const btn = card.querySelector('.btn-buy-plan');
+                btn.addEventListener('click', () => buyPlan(plan.id));
+
+                plansGrid.appendChild(card);
+            });
+
+            lucide.createIcons();
+        }
+
+        async function buyPlan(planId) {
+            const initData = tg?.initData;
+            if (!initData) {
+                showToast('Оплата доступна при открытии через Telegram-бота', true);
+                return;
+            }
+
+            try {
+                showToast('Формирование счета на звёзды...');
+                const res = await fetch('/api/create-invoice', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Telegram-Init-Data': initData
+                    },
+                    body: JSON.stringify({ plan_id: planId })
+                });
+
+                const data = await res.json();
+                if (!res.ok || !data.invoice_link) {
+                    showToast(data.detail || 'Не удалось сформировать счёт', true);
+                    return;
+                }
+
+                // Открываем нативное окно оплаты Telegram Stars
+                tg.openInvoice(data.invoice_link, (status) => {
+                    if (status === 'paid') {
+                        if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+                        showToast('🎉 Оплата звёздами прошла успешно! PRO активирован!');
+                        fetchUserStatus();
+                        closeTariffsModal();
+                        triggerRedraw();
+                    } else if (status === 'cancelled') {
+                        showToast('Оплата отменена');
+                    } else if (status === 'failed') {
+                        showToast('Ошибка при проведении платежа', true);
+                    }
+                });
+            } catch (err) {
+                console.error('Invoice error:', err);
+                showToast('Ошибка при связи с сервером', true);
+            }
+        }
+
+        function openTariffsModal() {
+            const modal = document.getElementById('tariffsModal');
+            if (modal) modal.classList.remove('hidden');
+            if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+            loadPlansList();
+            updateUserUI();
+        }
+
+        function closeTariffsModal() {
+            const modal = document.getElementById('tariffsModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        document.getElementById('btnOpenTariffs')?.addEventListener('click', openTariffsModal);
+        document.getElementById('btnCloseTariffs')?.addEventListener('click', closeTariffsModal);
+        document.getElementById('tariffsModal')?.addEventListener('click', (e) => {
+            if (e.target.id === 'tariffsModal') closeTariffsModal();
+        });
+
+        // Mobile Navigation Handler
+        const sidebarPanel = document.getElementById('sidebarPanel');
+        const previewPanel = document.getElementById('previewPanel');
+        const mobileNavText = document.getElementById('mobileNavText');
+        const mobileNavSettings = document.getElementById('mobileNavSettings');
+        const mobileNavPreview = document.getElementById('mobileNavPreview');
+        const mobileNavTariffs = document.getElementById('mobileNavTariffs');
+
+        function setMobileTab(activeNavId) {
+            [mobileNavText, mobileNavSettings, mobileNavPreview, mobileNavTariffs].forEach(btn => {
+                if (btn) btn.className = "flex-1 py-1.5 flex flex-col items-center gap-1 text-zinc-400 hover:text-zinc-200 text-[10px] font-medium transition-all";
+            });
+
+            const activeBtn = document.getElementById(activeNavId);
+            if (activeBtn) {
+                activeBtn.className = "flex-1 py-1.5 flex flex-col items-center gap-1 text-amber-400 text-[10px] font-semibold transition-all";
+            }
+
+            if (tg?.HapticFeedback) tg.HapticFeedback.selectionChanged();
+        }
+
+        mobileNavText?.addEventListener('click', () => {
+            setMobileTab('mobileNavText');
+            sidebarPanel.classList.remove('hidden');
+            previewPanel.classList.add('hidden');
+            document.getElementById('tabBtnText').click();
+        });
+
+        mobileNavSettings?.addEventListener('click', () => {
+            setMobileTab('mobileNavSettings');
+            sidebarPanel.classList.remove('hidden');
+            previewPanel.classList.add('hidden');
+            document.getElementById('tabBtnPaper').click();
+        });
+
+        mobileNavPreview?.addEventListener('click', () => {
+            setMobileTab('mobileNavPreview');
+            sidebarPanel.classList.remove('hidden');
+            previewPanel.classList.add('hidden');
+            document.getElementById('tabBtnText').click();
+            setTimeout(() => {
+                const previewSec = document.getElementById('inlinePreviewSection');
+                if (previewSec) {
+                    previewSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }, 60);
+        });
+
+        mobileNavTariffs?.addEventListener('click', () => {
+            openTariffsModal();
+        });
 
         // Application State
         const state = {
@@ -1165,82 +1515,117 @@ S(N) = 1 / ((1 - P) + P/N)
                 }
             });
 
+            // 4. Subtle watermark for free tier (removed in PRO)
+            if (!currentUser.is_pro) {
+                generatedCanvases.forEach(canvas => {
+                    const ctx = canvas.getContext('2d');
+                    ctx.save();
+                    ctx.font = "bold 13px 'Segoe UI', Roboto, sans-serif";
+                    ctx.fillStyle = "rgba(100, 100, 115, 0.45)";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "bottom";
+                    ctx.fillText("Handwriter Studio • @HandwriterStudio_bot", canvas.width / 2, canvas.height - 18);
+                    ctx.restore();
+                });
+            }
+
             renderViewLayout();
         }
 
         // ==========================================
-        // VIEW LAYOUT RENDERER (SPREAD / LIST / GRID)
+        // VIEW LAYOUT RENDERER (SPREAD / LIST / GRID / INLINE)
         // ==========================================
         function renderViewLayout() {
-            canvasContainer.innerHTML = '';
+            const isMobile = window.innerWidth < 768;
+            const inlineContainer = document.getElementById('inlineCanvasContainer');
+            const inlinePagesCount = document.getElementById('inlinePagesCount');
             const total = generatedCanvases.length;
 
-            if (state.viewMode === 'spread') {
-                // SPREAD VIEW: High-end notebook spread
-                canvasContainer.className = "flex flex-col items-center gap-12 transition-transform origin-top duration-150";
+            if (inlinePagesCount) {
+                inlinePagesCount.innerText = `${total} ${total === 1 ? 'лист' : (total < 5 ? 'листа' : 'листов')}`;
+            }
 
-                if (total === 1) {
-                    // Single page: clean, centered, no spine line, no empty boxes
-                    const singleWrapper = document.createElement('div');
-                    singleWrapper.className = "flex items-center justify-center bg-[#121216] p-4 rounded-3xl border border-zinc-800/80 shadow-[0_30px_70px_-15px_rgba(0,0,0,0.85)]";
-                    singleWrapper.appendChild(createPageCard(1, generatedCanvases[0]));
-                    canvasContainer.appendChild(singleWrapper);
-                } else {
-                    for (let i = 0; i < total; i += 2) {
-                        const p1 = i + 1;
-                        const p2 = i + 2;
+            canvasContainer.innerHTML = '';
+            if (inlineContainer) inlineContainer.innerHTML = '';
 
-                        const spreadWrapper = document.createElement('div');
-                        spreadWrapper.className = "flex items-center justify-center gap-0 bg-[#121216] p-4 rounded-3xl border border-zinc-800/80 shadow-[0_30px_70px_-15px_rgba(0,0,0,0.85)] relative";
+            if (isMobile && inlineContainer) {
+                // Mobile: display handwritten sheets right under text input on main screen
+                generatedCanvases.forEach((canvas, index) => {
+                    const card = createPageCard(index + 1, canvas, true);
+                    inlineContainer.appendChild(card);
+                });
+            } else {
+                // Desktop: display in right drafting area
+                if (state.viewMode === 'spread') {
+                    canvasContainer.className = "flex flex-col items-center gap-12 transition-transform origin-top duration-150";
 
-                        spreadWrapper.appendChild(createPageCard(p1, generatedCanvases[p1 - 1]));
+                    if (total === 1) {
+                        const singleWrapper = document.createElement('div');
+                        singleWrapper.className = "flex items-center justify-center bg-[#121216] p-4 rounded-3xl border border-zinc-800/80 shadow-[0_30px_70px_-15px_rgba(0,0,0,0.85)]";
+                        singleWrapper.appendChild(createPageCard(1, generatedCanvases[0], false));
+                        canvasContainer.appendChild(singleWrapper);
+                    } else {
+                        for (let i = 0; i < total; i += 2) {
+                            const p1 = i + 1;
+                            const p2 = i + 2;
 
-                        if (p2 <= total) {
-                            // Subtle spine shadow placed physically between the two real pages
-                            const spine = document.createElement('div');
-                            spine.className = "w-4 self-stretch my-6 bg-gradient-to-r from-black/20 via-black/80 to-black/20 rounded-full shrink-0 z-10 pointer-events-none -mx-2 blur-[0.5px]";
-                            spreadWrapper.appendChild(spine);
-                            spreadWrapper.appendChild(createPageCard(p2, generatedCanvases[p2 - 1]));
+                            const spreadWrapper = document.createElement('div');
+                            spreadWrapper.className = "flex items-center justify-center gap-0 bg-[#121216] p-4 rounded-3xl border border-zinc-800/80 shadow-[0_30px_70px_-15px_rgba(0,0,0,0.85)] relative";
+                            spreadWrapper.appendChild(createPageCard(p1, generatedCanvases[p1 - 1], false));
+
+                            if (p2 <= total) {
+                                const spine = document.createElement('div');
+                                spine.className = "w-4 self-stretch my-6 bg-gradient-to-r from-black/20 via-black/80 to-black/20 rounded-full shrink-0 z-10 pointer-events-none -mx-2 blur-[0.5px]";
+                                spreadWrapper.appendChild(spine);
+                                spreadWrapper.appendChild(createPageCard(p2, generatedCanvases[p2 - 1], false));
+                            }
+                            canvasContainer.appendChild(spreadWrapper);
                         }
-
-                        canvasContainer.appendChild(spreadWrapper);
                     }
+                } else if (state.viewMode === 'list') {
+                    canvasContainer.className = "flex flex-col items-center gap-10 transition-transform origin-top duration-150";
+                    generatedCanvases.forEach((canvas, index) => {
+                        const card = createPageCard(index + 1, canvas, false);
+                        canvasContainer.appendChild(card);
+                    });
+                } else if (state.viewMode === 'grid') {
+                    canvasContainer.className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 transition-transform origin-top duration-150";
+                    generatedCanvases.forEach((canvas, index) => {
+                        const card = createPageCard(index + 1, canvas, false);
+                        canvasContainer.appendChild(card);
+                    });
                 }
-            } else if (state.viewMode === 'list') {
-                // LIST VIEW: Stacked
-                canvasContainer.className = "flex flex-col items-center gap-10 transition-transform origin-top duration-150";
-                generatedCanvases.forEach((canvas, index) => {
-                    const card = createPageCard(index + 1, canvas);
-                    canvasContainer.appendChild(card);
-                });
-            } else if (state.viewMode === 'grid') {
-                // GRID VIEW: Architecture layout
-                canvasContainer.className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 transition-transform origin-top duration-150";
-                generatedCanvases.forEach((canvas, index) => {
-                    const card = createPageCard(index + 1, canvas);
-                    canvasContainer.appendChild(card);
-                });
             }
 
             lucide.createIcons();
             applyZoom();
         }
 
+        window.addEventListener('resize', () => {
+            renderViewLayout();
+        });
+
         // Create Page Card Component with Studio Precision
-        function createPageCard(pageNum, canvas) {
+        function createPageCard(pageNum, canvas, isInline = false) {
             const wrapper = document.createElement('div');
-            wrapper.className = "flex flex-col items-center gap-3 shrink-0 group relative";
+            wrapper.className = isInline
+                ? "flex flex-col items-center gap-3 w-full group relative"
+                : "flex flex-col items-center gap-3 shrink-0 group relative";
 
             const canvasBox = document.createElement('div');
-            canvasBox.className = "max-h-[calc(100vh-14rem)] max-w-full bg-[#121216] shadow-2xl rounded-2xl p-2.5 flex justify-center items-center overflow-hidden border border-zinc-800/80 ring-1 ring-white/5 relative transition-all hover:border-zinc-700";
+            canvasBox.className = isInline
+                ? "w-full max-w-full bg-[#121216] shadow-xl rounded-2xl p-2 sm:p-2.5 flex justify-center items-center overflow-hidden border border-zinc-800/80 ring-1 ring-white/5 relative transition-all"
+                : "max-h-[calc(100vh-14rem)] max-w-full bg-[#121216] shadow-2xl rounded-2xl p-2.5 flex justify-center items-center overflow-hidden border border-zinc-800/80 ring-1 ring-white/5 relative transition-all hover:border-zinc-700";
 
             // Page Badge
             const badge = document.createElement('div');
-            badge.className = "absolute top-4 left-4 bg-black/85 text-zinc-300 text-[10px] font-mono px-2.5 py-1 rounded-md backdrop-blur-md border border-zinc-800 shadow-md flex items-center gap-1.5 z-10";
+            badge.className = "absolute top-3.5 left-3.5 bg-black/85 text-zinc-300 text-[10px] font-mono px-2 py-0.5 rounded-md backdrop-blur-md border border-zinc-800 shadow-md flex items-center gap-1.5 z-10";
             badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> Лист ${pageNum} ${pageNum % 2 === 0 ? '(Чётный)' : '(Нечётный)'}`;
             canvasBox.appendChild(badge);
 
-            canvas.className = "max-h-[calc(100vh-17rem)] w-auto object-contain rounded-xl shadow-lg transition-all";
+            canvas.className = isInline
+                ? "w-full h-auto object-contain rounded-xl shadow-md transition-all"
+                : "max-h-[calc(100vh-17rem)] w-auto object-contain rounded-xl shadow-lg transition-all";
             canvasBox.appendChild(canvas);
             wrapper.appendChild(canvasBox);
 
@@ -1624,7 +2009,14 @@ S(N) = 1 / ((1 - P) + P/N)
                 return;
             }
 
-            showToast('Формирование чистого PDF...');
+            if (!currentUser.is_pro && generatedCanvases.length > 3) {
+                showToast('В бесплатной версии экспорт ограничен 3 страницами. Оформите PRO для безлимита! ⭐', true);
+                openTariffsModal();
+                return;
+            }
+
+            showToast('Формирование PDF...');
+            if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
             const { jsPDF } = window.jspdf;
             const firstCanvas = generatedCanvases[0];
             const isLandscape = firstCanvas.width > firstCanvas.height;
@@ -1654,7 +2046,14 @@ S(N) = 1 / ((1 - P) + P/N)
                 return;
             }
 
+            if (!currentUser.is_pro && generatedCanvases.length > 3) {
+                showToast('В бесплатной версии экспорт ограничен 3 страницами. Оформите PRO для безлимита! ⭐', true);
+                openTariffsModal();
+                return;
+            }
+
             showToast('Создание ZIP архива...');
+            if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
             const zip = new JSZip();
 
             generatedCanvases.forEach((canvas, index) => {
@@ -1702,6 +2101,8 @@ S(N) = 1 / ((1 - P) + P/N)
 
         // Initialize App
         window.addEventListener('load', () => {
+            fetchUserStatus();
+            loadPlansList();
             restoreFromLocalStorage();
             updateStats();
             loadTemplatesList();
