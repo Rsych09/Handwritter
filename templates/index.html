@@ -835,6 +835,42 @@
         </div>
     </div>
 
+    <!-- Image Preview Modal (For direct view & saving to Photos on mobile) -->
+    <div id="imagePreviewModal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
+        <div class="relative max-w-xl w-full flex flex-col items-center gap-3 bg-[#121217] border border-zinc-800 rounded-3xl p-4 sm:p-5 shadow-2xl">
+            <!-- Close button -->
+            <button id="btnCloseImagePreview" class="absolute top-3 right-3 text-zinc-400 hover:text-white p-2 rounded-xl bg-zinc-800/80 hover:bg-zinc-700 cursor-pointer transition-all z-10">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+
+            <div class="flex items-center gap-2 text-xs font-semibold text-zinc-300 mr-auto">
+                <i data-lucide="image" class="w-4 h-4 text-amber-400"></i>
+                <span id="previewPageTitle">Лист 1</span>
+            </div>
+
+            <!-- Helpful hint for phone users -->
+            <div class="w-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-[11px] px-3 py-2 rounded-xl flex items-center gap-2">
+                <span class="text-base">💡</span>
+                <span><b>Для телефона:</b> удерживайте палец на изображении, чтобы сохранить его в галерею смартфона.</span>
+            </div>
+
+            <!-- Image View -->
+            <div class="w-full max-h-[62vh] overflow-auto flex justify-center bg-[#09090b] rounded-2xl p-1 border border-zinc-800/80">
+                <img id="previewModalImg" class="max-h-[60vh] w-auto object-contain rounded-xl select-none" alt="Лист конспекта" />
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-wrap items-center justify-center gap-2 w-full pt-1">
+                <button id="btnPreviewSendTg" class="flex-1 min-w-[140px] px-4 py-2.5 bg-blue-600 hover:bg-blue-500 active:scale-98 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer shadow-md transition-all">
+                    <i data-lucide="send" class="w-3.5 h-3.5"></i> Отправить в Telegram
+                </button>
+                <button id="btnPreviewDownloadNative" class="flex-1 min-w-[140px] px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 active:scale-98 text-zinc-200 rounded-xl text-xs font-medium flex items-center justify-center gap-2 border border-zinc-700/60 cursor-pointer transition-all">
+                    <i data-lucide="download" class="w-3.5 h-3.5"></i> Скачать PNG
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ==========================================
         // 🌟 TELEGRAM WEBAPP SDK & USER STATE
@@ -2104,18 +2140,20 @@ S(N) = 1 / ((1 - P) + P/N)
 
             const canvasBox = document.createElement('div');
             canvasBox.className = isInline
-                ? "w-full max-w-full bg-[#121216] shadow-xl rounded-2xl p-2 sm:p-2.5 flex justify-center items-center overflow-hidden border border-zinc-800/80 ring-1 ring-white/5 relative transition-all"
-                : "max-h-[calc(100vh-14rem)] max-w-full bg-[#121216] shadow-2xl rounded-2xl p-2.5 flex justify-center items-center overflow-hidden border border-zinc-800/80 ring-1 ring-white/5 relative transition-all hover:border-zinc-700";
+                ? "w-full max-w-full bg-[#121216] shadow-xl rounded-2xl p-2 sm:p-2.5 flex justify-center items-center overflow-hidden border border-zinc-800/80 ring-1 ring-white/5 relative transition-all cursor-pointer hover:border-zinc-700"
+                : "max-h-[calc(100vh-14rem)] max-w-full bg-[#121216] shadow-2xl rounded-2xl p-2.5 flex justify-center items-center overflow-hidden border border-zinc-800/80 ring-1 ring-white/5 relative transition-all hover:border-zinc-700 cursor-pointer";
+            canvasBox.title = "Нажмите для открытия и сохранения фото на телефон";
+            canvasBox.addEventListener('click', () => openImagePreview(canvas, pageNum));
 
             // Page Badge
             const badge = document.createElement('div');
-            badge.className = "absolute top-3.5 left-3.5 bg-black/85 text-zinc-300 text-[10px] font-mono px-2 py-0.5 rounded-md backdrop-blur-md border border-zinc-800 shadow-md flex items-center gap-1.5 z-10";
+            badge.className = "absolute top-3.5 left-3.5 bg-black/85 text-zinc-300 text-[10px] font-mono px-2 py-0.5 rounded-md backdrop-blur-md border border-zinc-800 shadow-md flex items-center gap-1.5 z-10 pointer-events-none";
             badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> Лист ${pageNum} ${pageNum % 2 === 0 ? '(Чётный)' : '(Нечётный)'}`;
             canvasBox.appendChild(badge);
 
             canvas.className = isInline
-                ? "w-full h-auto object-contain rounded-xl shadow-md transition-all"
-                : "max-h-[calc(100vh-17rem)] w-auto object-contain rounded-xl shadow-lg transition-all";
+                ? "w-full h-auto object-contain rounded-xl shadow-md transition-all pointer-events-none"
+                : "max-h-[calc(100vh-17rem)] w-auto object-contain rounded-xl shadow-lg transition-all pointer-events-none";
             canvasBox.appendChild(canvas);
             wrapper.appendChild(canvasBox);
 
@@ -2123,12 +2161,23 @@ S(N) = 1 / ((1 - P) + P/N)
             const actionsBar = document.createElement('div');
             actionsBar.className = "flex items-center gap-2";
 
+            // Photo Preview Button (Great for saving on mobile)
+            const zoomBtn = document.createElement('button');
+            zoomBtn.className = "px-3 py-1.5 bg-[#141418] hover:bg-[#1c1c22] text-amber-300 hover:text-amber-200 rounded-xl text-xs font-medium flex items-center gap-1.5 border border-zinc-800 transition-colors cursor-pointer shadow-sm";
+            zoomBtn.innerHTML = `<i data-lucide="maximize-2" class="w-3.5 h-3.5 text-amber-400"></i> Фото`;
+            zoomBtn.title = "Открыть фото для сохранения в галерею смартфона";
+            zoomBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openImagePreview(canvas, pageNum);
+            });
+
             // Copy to Clipboard Button
             const copyBtn = document.createElement('button');
             copyBtn.className = "px-3 py-1.5 bg-[#141418] hover:bg-[#1c1c22] text-zinc-300 hover:text-white rounded-xl text-xs font-medium flex items-center gap-1.5 border border-zinc-800 transition-colors cursor-pointer shadow-sm";
-            copyBtn.innerHTML = `<i data-lucide="copy" class="w-3.5 h-3.5 text-zinc-400"></i> Скопировать`;
+            copyBtn.innerHTML = `<i data-lucide="copy" class="w-3.5 h-3.5 text-zinc-400"></i> Копировать`;
             copyBtn.title = "Скопировать лист в буфер обмена";
-            copyBtn.addEventListener('click', () => {
+            copyBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
                 canvas.toBlob(blob => {
                     if (!blob) {
                         showToast('Не удалось скопировать', true);
@@ -2148,19 +2197,28 @@ S(N) = 1 / ((1 - P) + P/N)
                 }, 'image/png');
             });
 
-            // Download PNG Button
+            // Download PNG Button (Works with Telegram bot send)
             const dlBtn = document.createElement('button');
             dlBtn.className = "px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-xl text-xs font-medium flex items-center gap-1.5 border border-zinc-700/60 transition-colors cursor-pointer shadow-sm";
             dlBtn.innerHTML = `<i data-lucide="download" class="w-3.5 h-3.5 text-zinc-300"></i> PNG`;
             dlBtn.title = "Скачать этот лист в высоком качестве";
-            dlBtn.addEventListener('click', () => {
-                const link = document.createElement('a');
-                link.download = `handwritten_page_${pageNum}.png`;
-                link.href = canvas.toDataURL('image/png');
-                link.click();
-                showToast(`Лист ${pageNum} скачивается...`);
+            dlBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                canvas.toBlob(async (blob) => {
+                    if (!blob) {
+                        showToast('Ошибка при формировании изображения', true);
+                        return;
+                    }
+                    await handleExportDownload(
+                        blob,
+                        `handwritten_page_${pageNum}.png`,
+                        'image/png',
+                        `✍️ Лист ${pageNum} в оригинальном качестве (PNG)`
+                    );
+                }, 'image/png');
             });
 
+            actionsBar.appendChild(zoomBtn);
             actionsBar.appendChild(copyBtn);
             actionsBar.appendChild(dlBtn);
             wrapper.appendChild(actionsBar);
@@ -2491,6 +2549,158 @@ S(N) = 1 / ((1 - P) + P/N)
         });
 
         // ==========================================
+        // 📥 SMART EXPORT & MOBILE TELEGRAM DOWNLOAD
+        // ==========================================
+        async function handleExportDownload(blob, filename, mimeType, caption) {
+            const tg = window.Telegram?.WebApp;
+            const isTelegram = Boolean(tg && tg.initData);
+
+            showToast('Подготовка файла...');
+
+            if (isTelegram) {
+                showToast('Отправка в чат Telegram... ⏳');
+                try {
+                    const formData = new FormData();
+                    formData.append('file', blob, filename);
+                    formData.append('init_data', tg.initData);
+                    if (caption) formData.append('caption', caption);
+
+                    const resp = await fetch('/api/export_send', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (resp.ok) {
+                        const result = await resp.json();
+                        if (result.ok) {
+                            if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+                            
+                            if (result.sent_to_telegram) {
+                                showToast('✅ Файл отправлен в ваш чат с ботом!');
+                                if (tg.showPopup) {
+                                    tg.showPopup({
+                                        title: "Файл готов! 📄",
+                                        message: `«${filename}» успешно отправлен в ваш личный диалог с ботом! Вы можете открыть, сохранить в память телефона или переслать его прямо в Telegram.`,
+                                        buttons: [{ type: "ok", text: "Отлично" }]
+                                    });
+                                }
+                            }
+
+                            // Для Telegram 8.0+: также вызываем нативное скачивание на устройство
+                            if (tg.downloadFile && tg.isVersionAtLeast && tg.isVersionAtLeast('8.0') && result.download_url) {
+                                try {
+                                    tg.downloadFile({
+                                        url: result.download_url,
+                                        file_name: filename
+                                    }, function(accepted) {
+                                        if (accepted) {
+                                            showToast('Файл сохраняется на устройство...');
+                                        }
+                                    });
+                                } catch(e) {
+                                    console.log('tg.downloadFile:', e);
+                                }
+                            }
+                            return;
+                        }
+                    }
+                } catch(e) {
+                    console.error('Error during /api/export_send:', e);
+                }
+            }
+
+            // Фоллбэк для ПК / стандартных браузеров вне Telegram
+            try {
+                const link = document.createElement('a');
+                link.download = filename;
+                const blobUrl = URL.createObjectURL(blob);
+                link.href = blobUrl;
+                document.body.appendChild(link);
+                link.click();
+                setTimeout(() => {
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(blobUrl);
+                }, 1500);
+                showToast(`Файл «${filename}» скачивается!`);
+            } catch(e) {
+                showToast('Ошибка при скачивании файла', true);
+            }
+        }
+
+        // ==========================================
+        // 🖼️ IMAGE PREVIEW MODAL (GALLERY / DIRECT PHOTO SAVE)
+        // ==========================================
+        const imagePreviewModal = document.getElementById('imagePreviewModal');
+        const previewModalImg = document.getElementById('previewModalImg');
+        const previewPageTitle = document.getElementById('previewPageTitle');
+        const btnCloseImagePreview = document.getElementById('btnCloseImagePreview');
+        const btnPreviewSendTg = document.getElementById('btnPreviewSendTg');
+        const btnPreviewDownloadNative = document.getElementById('btnPreviewDownloadNative');
+        let currentPreviewCanvas = null;
+        let currentPreviewPageNum = 1;
+
+        function openImagePreview(canvas, pageNum) {
+            currentPreviewCanvas = canvas;
+            currentPreviewPageNum = pageNum;
+            if (previewModalImg) {
+                previewModalImg.src = canvas.toDataURL('image/png');
+            }
+            if (previewPageTitle) {
+                previewPageTitle.innerText = `Лист ${pageNum} (Предпросмотр)`;
+            }
+            if (imagePreviewModal) {
+                imagePreviewModal.classList.remove('hidden');
+                if (window.lucide && typeof window.lucide.createIcons === 'function') {
+                    lucide.createIcons();
+                }
+            }
+            if (tg?.HapticFeedback) tg.HapticFeedback.selectionChanged();
+        }
+
+        function closeImagePreview() {
+            if (imagePreviewModal) {
+                imagePreviewModal.classList.add('hidden');
+            }
+        }
+
+        if (btnCloseImagePreview) btnCloseImagePreview.addEventListener('click', closeImagePreview);
+        if (imagePreviewModal) {
+            imagePreviewModal.addEventListener('click', (e) => {
+                if (e.target.id === 'imagePreviewModal') closeImagePreview();
+            });
+        }
+
+        if (btnPreviewSendTg) {
+            btnPreviewSendTg.addEventListener('click', () => {
+                if (!currentPreviewCanvas) return;
+                currentPreviewCanvas.toBlob(async (blob) => {
+                    if (!blob) return;
+                    await handleExportDownload(
+                        blob,
+                        `handwritten_page_${currentPreviewPageNum}.png`,
+                        'image/png',
+                        `✍️ Лист ${currentPreviewPageNum} конспекта в высоком качестве (PNG)`
+                    );
+                }, 'image/png');
+            });
+        }
+
+        if (btnPreviewDownloadNative) {
+            btnPreviewDownloadNative.addEventListener('click', () => {
+                if (!currentPreviewCanvas) return;
+                currentPreviewCanvas.toBlob(async (blob) => {
+                    if (!blob) return;
+                    await handleExportDownload(
+                        blob,
+                        `handwritten_page_${currentPreviewPageNum}.png`,
+                        'image/png',
+                        `✍️ Лист ${currentPreviewPageNum} конспекта`
+                    );
+                }, 'image/png');
+            });
+        }
+
+        // ==========================================
         // EXPORT TO PDF & ZIP
         // ==========================================
         document.getElementById('btnDownloadPdf').addEventListener('click', async () => {
@@ -2526,8 +2736,13 @@ S(N) = 1 / ((1 - P) + P/N)
                 pdf.addImage(imgData, 'JPEG', 0, 0, c.width, c.height);
             }
 
-            pdf.save('handwritten_notebook.pdf');
-            showToast('PDF успешно сохранен!');
+            const pdfBlob = pdf.output('blob');
+            await handleExportDownload(
+                pdfBlob,
+                'handwritten_notebook.pdf',
+                'application/pdf',
+                `📄 **Ваш рукописный конспект готов!**\nВсего страниц: ${generatedCanvases.length}\nСоздано в Handwriter Studio ✨`
+            );
         });
 
         document.getElementById('btnDownloadZip').addEventListener('click', () => {
@@ -2552,12 +2767,13 @@ S(N) = 1 / ((1 - P) + P/N)
                 zip.file(`handwritten_page_${index + 1}.png`, base64Data, { base64: true });
             });
 
-            zip.generateAsync({ type: "blob" }).then(function(content) {
-                const link = document.createElement('a');
-                link.download = 'handwritten_notebook.zip';
-                link.href = URL.createObjectURL(content);
-                link.click();
-                showToast('ZIP архив скачан!');
+            zip.generateAsync({ type: "blob" }).then(async function(content) {
+                await handleExportDownload(
+                    content,
+                    'handwritten_notebook.zip',
+                    'application/zip',
+                    `📦 **Ваш архив с конспектом готов!**\nСодержит ${generatedCanvases.length} стр. в формате PNG высокого разрешения.`
+                );
             });
         });
 

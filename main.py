@@ -3,10 +3,14 @@ import os
 import sys
 import shutil
 import threading
+import time
+import uuid
 import webbrowser
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import List, Optional, Dict, Any
+
+import aiofiles
 
 # Настраиваем UTF-8 для консоли Windows
 if sys.stdout and hasattr(sys.stdout, "reconfigure"):
@@ -19,7 +23,7 @@ from dotenv import load_dotenv
 # Загружаем переменные окружения из .env
 load_dotenv()
 
-from fastapi import FastAPI, HTTPException, UploadFile, File, Header, Query, Request
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Header, Query, Request
 from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -42,11 +46,13 @@ BASE_DIR = Path(__file__).resolve().parent
 ASSETS_DIR = BASE_DIR / "assets"
 FONTS_DIR = BASE_DIR / "fonts"
 TEMPLATES_DIR = BASE_DIR / "templates"
+EXPORTS_DIR = BASE_DIR / "temp_exports"
 
 # Гарантируем наличие необходимых папок
 ASSETS_DIR.mkdir(parents=True, exist_ok=True)
 FONTS_DIR.mkdir(parents=True, exist_ok=True)
 TEMPLATES_DIR.mkdir(parents=True, exist_ok=True)
+EXPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
 ALLOWED_IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp"}
 ALLOWED_FONT_EXTS = {".ttf", ".otf", ".woff", ".woff2"}
@@ -57,6 +63,15 @@ async def lifespan(app: FastAPI):
     """Инициализация базы данных и фонового поллинга Telegram-бота."""
     print("[INFO] Initializing Handwriter Studio database...")
     await init_db()
+
+    # Очистка старых временных экспортированных файлов (> 1 часа)
+    try:
+        now_ts = time.time()
+        for f in EXPORTS_DIR.glob("*"):
+            if f.is_file() and (now_ts - f.stat().st_mtime > 3600):
+                f.unlink(missing_ok=True)
+    except Exception:
+        pass
 
     polling_task = None
     if bot:
@@ -466,6 +481,96 @@ async def create_invoice(
         "invoice_link": invoice_link,
         "plan": plan
     })
+
+
+@app.post("/api/export_send")
+async def export_and_send_to_telegram(
+    request: Request,
+    file: UploadFile = File(...),
+    init_data: Optional[str] = Form(None),
+    caption: Optional[str] = Form(None),
+    x_telegram_init_data: Optional[str] = Header(None),
+):
+    """
+    Принимает сформированный файл (PDF, ZIP, PNG), сохраняет для прямого скачивания
+    и отправляет его напрямую пользователю в личный диалог с Telegram-ботом.
+    """
+    raw_init_data = init_data or x_telegram_init_data
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Файл пуст.")
+
+    token = uuid.uuid4().hex[:16]
+    orig_name = file.filename or "handwritten_document.pdf"
+    safe_filename = "".join(c for c in orig_name if c.isalnum() or c in "._-")
+    if not safe_filename:
+        safe_filename = "handwritten_document.pdf"
+
+    # Сохраняем во временную директорию
+    file_path = EXPORTS_DIR / f"{token}_{safe_filename}"
+    async with aiofiles.open(file_path, "wb") as f:
+        await f.write(content)
+
+    # Базовый URL для скачивания
+    base_url = os.getenv("WEBAPP_URL", "").rstrip("/")
+    if not base_url or not base_url.startswith("http"):
+        base_url = str(request.base_url).rstrip("/")
+
+    download_url = f"{base_url}/api/download/{token}/{safe_filename}"
+
+    sent_to_telegram = False
+    telegram_error = None
+
+    if raw_init_data and bot:
+        user_info = validate_telegram_init_data(raw_init_data)
+        if user_info and "id" in user_info:
+            user_id = user_info["id"]
+            try:
+                from aiogram.types import BufferedInputFile
+                msg_caption = caption or f"✍️ Ваш файл «{safe_filename}» готов!"
+                await bot.send_document(
+                    chat_id=user_id,
+                    document=BufferedInputFile(content, filename=safe_filename),
+                    caption=msg_caption
+                )
+                sent_to_telegram = True
+            except Exception as e:
+                telegram_error = str(e)
+                print(f"[WARN] Failed to send document to Telegram chat {user_id}: {e}")
+
+    return JSONResponse({
+        "ok": True,
+        "sent_to_telegram": sent_to_telegram,
+        "download_url": download_url,
+        "filename": safe_filename,
+        "telegram_error": telegram_error
+    })
+
+
+@app.get("/api/download/{token}/{filename}")
+async def download_temp_file(token: str, filename: str):
+    """
+    Прямое скачивание временного файла для Telegram.WebApp.downloadFile и браузеров.
+    """
+    safe_filename = "".join(c for c in filename if c.isalnum() or c in "._-")
+    file_path = EXPORTS_DIR / f"{token}_{safe_filename}"
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Срок действия ссылки истек или файл не найден.")
+
+    media_type = "application/octet-stream"
+    if safe_filename.endswith(".pdf"):
+        media_type = "application/pdf"
+    elif safe_filename.endswith(".zip"):
+        media_type = "application/zip"
+    elif safe_filename.endswith(".png"):
+        media_type = "image/png"
+
+    return FileResponse(
+        path=str(file_path),
+        media_type=media_type,
+        filename=safe_filename,
+        headers={"Content-Disposition": f'attachment; filename="{safe_filename}"'}
+    )
 
 
 def open_browser(port: int = 8000):
