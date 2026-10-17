@@ -14,6 +14,16 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <!-- Telegram WebApp SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script>
+        if (window.Telegram && window.Telegram.WebApp) {
+            try {
+                window.Telegram.WebApp.ready();
+                window.Telegram.WebApp.expand();
+            } catch (e) {
+                console.warn('Early Telegram WebApp init warning:', e);
+            }
+        }
+    </script>
     
     <style>
         @font-face {
@@ -737,9 +747,6 @@
     </div>
 
     <script>
-        // Initialize Lucide Icons
-        lucide.createIcons();
-
         // ==========================================
         // 🌟 TELEGRAM WEBAPP SDK & USER STATE
         // ==========================================
@@ -753,6 +760,15 @@
             } catch(e) {
                 console.warn('Telegram WebApp init warning:', e);
             }
+        }
+
+        // Initialize Lucide Icons safely
+        try {
+            if (window.lucide && typeof window.lucide.createIcons === 'function') {
+                lucide.createIcons();
+            }
+        } catch(e) {
+            console.warn('Lucide icons init warning:', e);
         }
 
         let currentUser = {
