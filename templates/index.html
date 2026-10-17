@@ -1330,34 +1330,36 @@
 
                 users.forEach(u => {
                     const row = document.createElement('div');
-                    row.className = "flex items-center justify-between p-2 sm:p-2.5 rounded-xl bg-[#0e0e13] border border-zinc-800 text-xs gap-1.5";
+                    row.className = "flex items-center justify-between p-2.5 sm:p-3 rounded-xl bg-[#0e0e13] border border-zinc-800/80 hover:border-zinc-700/80 text-xs gap-2 transition-colors";
                     
                     const isAdm = u.is_admin;
                     const isPro = u.is_pro;
                     const statusBadge = isAdm
-                        ? `<span class="px-1.5 py-0.5 rounded-md bg-purple-500/20 text-purple-300 font-semibold border border-purple-500/40 text-[9px] sm:text-[10px]">Создатель</span>`
+                        ? `<span class="px-2.5 py-0.5 rounded-lg bg-purple-500/20 text-purple-300 font-semibold border border-purple-500/40 text-[11px] whitespace-nowrap shrink-0">👑 Создатель</span>`
                         : (isPro
-                            ? `<span class="px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/40 text-[9px] sm:text-[10px]">PRO</span>`
-                            : `<span class="px-1.5 py-0.5 rounded-md bg-zinc-800 text-zinc-400 text-[9px] sm:text-[10px]">Free</span>`);
+                            ? `<span class="px-2 py-0.5 rounded-lg bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/40 text-[11px] whitespace-nowrap shrink-0">⭐ PRO</span>`
+                            : `<span class="px-2 py-0.5 rounded-lg bg-zinc-800 text-zinc-400 text-[11px] whitespace-nowrap shrink-0">Free</span>`);
 
                     const name = u.first_name || (u.username ? `@${u.username}` : 'Аноним');
                     
                     let actionsHtml = '';
                     if (!isAdm) {
                         if (isPro) {
-                            actionsHtml = `<button class="btn-revoke px-2 py-1 rounded-lg bg-red-950/60 hover:bg-red-900 text-red-300 text-[10px] border border-red-800/60 cursor-pointer shrink-0" data-id="${u.telegram_id}">Снять PRO</button>`;
+                            actionsHtml = `<button class="btn-revoke px-2.5 py-1 rounded-lg bg-red-950/60 hover:bg-red-900 text-red-300 text-[11px] font-medium border border-red-800/60 cursor-pointer shrink-0 transition-all active:scale-95" data-id="${u.telegram_id}">Снять PRO</button>`;
                         } else {
-                            actionsHtml = `<button class="btn-quick-pro px-2 py-1 rounded-lg bg-amber-950/60 hover:bg-amber-900 text-amber-300 text-[10px] border border-amber-800/60 cursor-pointer shrink-0" data-id="${u.telegram_id}">Выдать</button>`;
+                            actionsHtml = `<button class="btn-quick-pro px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-[11px] font-medium border border-amber-500/40 cursor-pointer shrink-0 transition-all active:scale-95" data-id="${u.telegram_id}">Выдать</button>`;
                         }
+                    } else {
+                        actionsHtml = `<span class="text-[11px] text-purple-400 font-medium px-2 py-0.5 rounded-md bg-purple-950/40 border border-purple-800/40 shrink-0">VIP Доступ</span>`;
                     }
 
                     row.innerHTML = `
-                        <div class="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1 overflow-hidden">
-                            <span class="font-mono text-zinc-400 text-[10px] sm:text-[11px] shrink-0">${u.telegram_id}</span>
-                            <span class="font-medium text-white truncate text-[11px] sm:text-xs max-w-[80px] sm:max-w-none">${name}</span>
-                            <span class="shrink-0">${statusBadge}</span>
+                        <div class="flex items-center gap-2 min-w-0 flex-1">
+                            <span class="font-mono text-zinc-400 text-[11px] sm:text-xs shrink-0 select-all">${u.telegram_id}</span>
+                            <span class="font-medium text-white text-xs sm:text-sm truncate min-w-0" title="${name}">${name}</span>
+                            ${statusBadge}
                         </div>
-                        <div class="shrink-0">${actionsHtml}</div>
+                        <div class="shrink-0 flex items-center ml-1">${actionsHtml}</div>
                     `;
 
                     adminUsersList.appendChild(row);
