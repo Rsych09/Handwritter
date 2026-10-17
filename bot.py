@@ -25,8 +25,8 @@ from database import (
 logger = logging.getLogger("handwriter_bot")
 
 DEFAULT_BOT_TOKEN = "8961172401:AAF-q6J_EbbbmX2VTrxCRA1e9rzj_tHQJ6M"
-BOT_TOKEN = os.getenv("BOT_TOKEN", DEFAULT_BOT_TOKEN)
-WEBAPP_URL = os.getenv("WEBAPP_URL", "https://t.me/HandwriterStudio_bot/app")
+BOT_TOKEN = os.getenv("BOT_TOKEN", DEFAULT_BOT_TOKEN).strip().strip("'\"")
+WEBAPP_URL = os.getenv("WEBAPP_URL", "https://t.me/HandwriterStudio_bot/app").strip().strip("'\"")
 
 # Каталог тарифов за Telegram Stars (валюта XTR)
 PLANS: Dict[str, Dict[str, Any]] = {
@@ -398,3 +398,62 @@ async def handle_broadcast(message: Message):
             failed += 1
 
     await status_msg.edit_text(f"📢 **Рассылка завершена!**\n\n✅ Успешно доставлено: {sent}\n❌ Ошибок / заблокировали бота: {failed}", parse_mode="Markdown")
+ 
+ 
+@dp.callback_query(F.data == "show_plans")
+async def handle_show_plans_callback(callback_query):
+    """Отображение тарифов по инлайн-кнопке."""
+    user = callback_query.from_user
+    if user:
+        await get_or_create_user(
+            telegram_id=user.id,
+            username=user.username,
+            first_name=user.first_name,
+        )
+    text = (
+        "💎 **Премиум возможности Handwriter Studio PRO**\n\n"
+        "Откройте приложение и перейдите во вкладку **«Тарифы ⭐»**, чтобы оплатить любой тариф прямо через **Telegram Stars**:\n\n"
+    )
+    for p in PLANS.values():
+        badge = f" [{p.get('badge')}]" if p.get("badge") else ""
+        text += f"⭐ **{p['name']}**{badge} — `{p['stars']} Stars`\n_{p['description']}_\n\n"
+
+    try:
+        await callback_query.message.answer(text, parse_mode="Markdown", reply_markup=get_webapp_keyboard(user.id if user else None))
+    except Exception:
+        pass
+    await callback_query.answer()
+
+
+@dp.callback_query()
+async def handle_any_other_callback(callback_query):
+    """Гарантирует регистрацию пользователя при нажатии на любые инлайн-кнопки."""
+    user = callback_query.from_user
+    if user:
+        await get_or_create_user(
+            telegram_id=user.id,
+            username=user.username,
+            first_name=user.first_name,
+        )
+    await callback_query.answer()
+
+
+@dp.message()
+async def handle_any_incoming_message(message: Message):
+    """Гарантирует регистрацию пользователя при отправке любого сообщения в бота."""
+    user = message.from_user
+    if user:
+        await get_or_create_user(
+            telegram_id=user.id,
+            username=user.username,
+            first_name=user.first_name,
+        )
+    is_admin = user and user.id in ADMIN_IDS
+    admin_badge = "\n\n👑 **Вы авторизованы как Создатель!**" if is_admin else ""
+    text = (
+        f"👋 **Привет, {user.first_name if user else 'друг'}!**\n\n"
+        "Добро пожаловать в **Handwriter Studio** — генератор рукописных конспектов и лекций прямо в Telegram.\n\n"
+        "👇 Нажмите кнопку ниже, чтобы открыть приложение:"
+        f"{admin_badge}"
+    )
+    await message.answer(text, parse_mode="Markdown", reply_markup=get_webapp_keyboard(user.id if user else None))

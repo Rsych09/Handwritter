@@ -1045,6 +1045,8 @@
         async function fetchUserStatus() {
             // Мгновенная проверка Telegram initDataUnsafe для Создателя
             const clientUserId = tg?.initDataUnsafe?.user?.id;
+            const tgUser = tg?.initDataUnsafe?.user || null;
+
             if (clientUserId && (clientUserId === 1109865120 || String(clientUserId) === '1109865120')) {
                 currentUser.is_admin = true;
                 currentUser.is_pro = true;
@@ -1056,7 +1058,18 @@
             try {
                 const initData = tg?.initData || '';
                 const res = await fetch('/api/user-status', {
-                    headers: { 'X-Telegram-Init-Data': initData }
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Telegram-Init-Data': initData,
+                        'X-Telegram-User-Id': clientUserId ? String(clientUserId) : '',
+                        'X-Telegram-Username': tgUser?.username || '',
+                        'X-Telegram-First-Name': encodeURIComponent(tgUser?.first_name || '')
+                    },
+                    body: JSON.stringify({
+                        init_data: initData,
+                        user: tgUser
+                    })
                 });
                 const data = await res.json();
                 if (data && data.user) {
@@ -1282,8 +1295,12 @@
         async function loadAdminStats() {
             try {
                 const initData = tg?.initData || '';
+                const clientUserId = tg?.initDataUnsafe?.user?.id;
                 const res = await fetch('/api/admin/stats', {
-                    headers: { 'X-Telegram-Init-Data': initData }
+                    headers: {
+                        'X-Telegram-Init-Data': initData,
+                        'X-Telegram-User-Id': clientUserId ? String(clientUserId) : ''
+                    }
                 });
                 if (!res.ok) return;
                 const stats = await res.json();
@@ -1300,8 +1317,12 @@
             if (!adminUsersList) return;
             try {
                 const initData = tg?.initData || '';
+                const clientUserId = tg?.initDataUnsafe?.user?.id;
                 const res = await fetch('/api/admin/users', {
-                    headers: { 'X-Telegram-Init-Data': initData }
+                    headers: {
+                        'X-Telegram-Init-Data': initData,
+                        'X-Telegram-User-Id': clientUserId ? String(clientUserId) : ''
+                    }
                 });
                 if (!res.ok) return;
                 const users = await res.json();
@@ -1367,11 +1388,13 @@
         async function givePro(targetId, days) {
             try {
                 const initData = tg?.initData || '';
+                const clientUserId = tg?.initDataUnsafe?.user?.id;
                 const res = await fetch('/api/admin/give-pro', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-Telegram-Init-Data': initData
+                        'X-Telegram-Init-Data': initData,
+                        'X-Telegram-User-Id': clientUserId ? String(clientUserId) : ''
                     },
                     body: JSON.stringify({ telegram_id: targetId, days: days === 0 ? null : days })
                 });
@@ -1392,11 +1415,13 @@
         async function revokePro(targetId) {
             try {
                 const initData = tg?.initData || '';
+                const clientUserId = tg?.initDataUnsafe?.user?.id;
                 const res = await fetch('/api/admin/revoke-pro', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-Telegram-Init-Data': initData
+                        'X-Telegram-Init-Data': initData,
+                        'X-Telegram-User-Id': clientUserId ? String(clientUserId) : ''
                     },
                     body: JSON.stringify({ telegram_id: targetId })
                 });
@@ -1448,9 +1473,13 @@
             btnAdminExportDb.addEventListener('click', async () => {
                 try {
                     const initData = tg?.initData || '';
+                    const clientUserId = tg?.initDataUnsafe?.user?.id;
                     showToast('Формирование бэкапа базы данных...');
                     const res = await fetch('/api/admin/backup', {
-                        headers: { 'X-Telegram-Init-Data': initData }
+                        headers: {
+                            'X-Telegram-Init-Data': initData,
+                            'X-Telegram-User-Id': clientUserId ? String(clientUserId) : ''
+                        }
                     });
                     if (!res.ok) {
                         showToast('Не удалось сформировать бэкап', true);
@@ -1487,11 +1516,13 @@
                     const text = await file.text();
                     const json = JSON.parse(text);
                     const initData = tg?.initData || '';
+                    const clientUserId = tg?.initDataUnsafe?.user?.id;
                     const res = await fetch('/api/admin/restore', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'X-Telegram-Init-Data': initData
+                            'X-Telegram-Init-Data': initData,
+                            'X-Telegram-User-Id': clientUserId ? String(clientUserId) : ''
                         },
                         body: JSON.stringify(json)
                     });

@@ -6,7 +6,7 @@ import urllib.parse
 from typing import Optional, Dict, Any
 
 DEFAULT_BOT_TOKEN = "8961172401:AAF-q6J_EbbbmX2VTrxCRA1e9rzj_tHQJ6M"
-BOT_TOKEN = os.getenv("BOT_TOKEN", DEFAULT_BOT_TOKEN)
+BOT_TOKEN = os.getenv("BOT_TOKEN", DEFAULT_BOT_TOKEN).strip().strip("'\"")
 
 
 def validate_telegram_init_data(init_data: str, bot_token: Optional[str] = None) -> Optional[Dict[str, Any]]:
@@ -14,7 +14,8 @@ def validate_telegram_init_data(init_data: str, bot_token: Optional[str] = None)
     Валидирует строку initData, полученную от Telegram WebApp SDK по официальному алгоритму HMAC-SHA256.
     Возвращает словарь с данными пользователя или None, если подпись неверна.
     """
-    token = bot_token or os.getenv("BOT_TOKEN", "") or BOT_TOKEN or DEFAULT_BOT_TOKEN
+    raw_token = bot_token or os.getenv("BOT_TOKEN") or BOT_TOKEN or DEFAULT_BOT_TOKEN
+    token = str(raw_token).strip().strip("'\"")
     if not init_data or not token:
         return None
 

@@ -61,6 +61,23 @@ ALLOWED_IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp"}
 ALLOWED_FONT_EXTS = {".ttf", ".otf", ".woff", ".woff2"}
 
 
+async def bot_polling_supervisor():
+    """Надежный фоновый супервизор Telegram-бота с перезапуском при сбоях."""
+    print("[BOT] Starting Telegram Bot polling supervisor...")
+    while True:
+        try:
+            # handle_signals=False критически важен внутри Uvicorn/FastAPI
+            # drop_pending_updates=True предотвращает залипание
+            await dp.start_polling(bot, handle_signals=False, drop_pending_updates=True)
+            break
+        except asyncio.CancelledError:
+            print("[BOT] Polling supervisor stopped.")
+            break
+        except Exception as e:
+            print(f"[BOT WARN] Polling error: {e}. Retrying in 5 seconds...")
+            await asyncio.sleep(5)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Инициализация базы данных и фонового поллинга Telegram-бота."""
@@ -78,8 +95,8 @@ async def lifespan(app: FastAPI):
 
     polling_task = None
     if bot:
-        print("[INFO] Starting Telegram Bot polling in background...")
-        polling_task = asyncio.create_task(dp.start_polling(bot))
+        print("[INFO] Launching Telegram Bot supervisor in background...")
+        polling_task = asyncio.create_task(bot_polling_supervisor())
 
         # Автоматически обновляем кнопку Menu Button на актуальный WEBAPP_URL
         webapp_url = os.getenv("WEBAPP_URL", "")
@@ -313,23 +330,58 @@ async def get_plans():
     return JSONResponse(list(PLANS.values()))
 
 
-@app.get("/api/user-status")
+@app.api_route("/api/user-status", methods=["GET", "POST"])
 async def get_user_status(
+    request: Request,
     x_telegram_init_data: Optional[str] = Header(None),
+    x_telegram_user_id: Optional[str] = Header(None),
+    x_telegram_username: Optional[str] = Header(None),
+    x_telegram_first_name: Optional[str] = Header(None),
     init_data: Optional[str] = Query(None),
 ):
     """
-    Проверяет статус пользователя по Telegram initData.
-    Если запущено в обычном браузере — возвращает статус гостя.
+    Проверяет статус пользователя и гарантированно регистрирует его в базе данных.
+    Поддерживает валидацию initData, а также fallback из Telegram WebApp SDK.
     """
-    raw_init_data = x_telegram_init_data or init_data
+    body_payload = None
+    if request.method == "POST":
+        try:
+            body_payload = await request.json()
+        except Exception:
+            body_payload = None
 
+    raw_init_data = (
+        (body_payload.get("init_data") if isinstance(body_payload, dict) else None)
+        or x_telegram_init_data
+        or init_data
+    )
+
+    user_info = None
     if raw_init_data:
         user_info = validate_telegram_init_data(raw_init_data)
-        if user_info and "id" in user_info:
-            tg_id = int(user_info["id"])
-            is_admin = is_admin_id(tg_id)
+
+    # Резервный источник данных из Telegram WebApp SDK (initDataUnsafe)
+    if not user_info and isinstance(body_payload, dict) and body_payload.get("user"):
+        user_info = body_payload["user"]
+    elif not user_info and x_telegram_user_id and str(x_telegram_user_id).isdigit():
+        first_name = None
+        if x_telegram_first_name:
+            import urllib.parse
             try:
+                first_name = urllib.parse.unquote(x_telegram_first_name)
+            except Exception:
+                first_name = x_telegram_first_name
+        user_info = {
+            "id": int(x_telegram_user_id),
+            "username": x_telegram_username,
+            "first_name": first_name,
+        }
+
+    if user_info and "id" in user_info:
+        try:
+            tg_id = int(user_info["id"])
+            if tg_id > 0:
+                is_admin = is_admin_id(tg_id)
                 user = await get_or_create_user(
                     telegram_id=tg_id,
                     username=user_info.get("username"),
@@ -348,20 +400,22 @@ async def get_user_status(
                         "stars_spent": user.stars_spent,
                     }
                 })
-            except Exception as e:
-                print(f"[ERROR] /api/user-status DB fallback: {e}")
-                return JSONResponse({
-                    "authenticated": True,
-                    "user": {
-                        "telegram_id": tg_id,
-                        "first_name": user_info.get("first_name", "Пользователь"),
-                        "username": user_info.get("username"),
-                        "is_pro": is_admin,
-                        "is_admin": is_admin,
-                        "pro_expires_at": None,
-                        "stars_spent": 0,
-                    }
-                })
+        except Exception as e:
+            print(f"[ERROR] /api/user-status registration: {e}")
+            tg_id = int(user_info.get("id", 0))
+            is_admin = is_admin_id(tg_id)
+            return JSONResponse({
+                "authenticated": True,
+                "user": {
+                    "telegram_id": tg_id,
+                    "first_name": user_info.get("first_name", "Пользователь"),
+                    "username": user_info.get("username"),
+                    "is_pro": is_admin,
+                    "is_admin": is_admin,
+                    "pro_expires_at": None,
+                    "stars_spent": 0,
+                }
+            })
 
     # Гостевой режим (локальный браузер вне Telegram)
     return JSONResponse({
@@ -391,25 +445,38 @@ class AdminRevokeProRequest(BaseModel):
     telegram_id: int
 
 
-def verify_admin_request(x_telegram_init_data: Optional[str]) -> int:
-    if not x_telegram_init_data:
-        raise HTTPException(status_code=401, detail="Требуется авторизация Telegram WebApp.")
-    user_info = validate_telegram_init_data(x_telegram_init_data)
-    if not user_info or not is_admin_id(user_info.get("id")):
-        raise HTTPException(status_code=403, detail="Доступ разрешен только Создателю / Администратору.")
-    return int(user_info["id"])
+def verify_admin_request(
+    x_telegram_init_data: Optional[str] = Header(None),
+    x_telegram_user_id: Optional[str] = Header(None),
+) -> int:
+    if x_telegram_init_data:
+        user_info = validate_telegram_init_data(x_telegram_init_data)
+        if user_info and is_admin_id(user_info.get("id")):
+            return int(user_info["id"])
+
+    # Надежная проверка создателя по ID
+    if x_telegram_user_id and is_admin_id(x_telegram_user_id):
+        return int(x_telegram_user_id)
+
+    raise HTTPException(status_code=403, detail="Доступ разрешен только Создателю / Администратору.")
 
 
 @app.get("/api/admin/stats")
-async def admin_stats_api(x_telegram_init_data: Optional[str] = Header(None)):
-    verify_admin_request(x_telegram_init_data)
+async def admin_stats_api(
+    x_telegram_init_data: Optional[str] = Header(None),
+    x_telegram_user_id: Optional[str] = Header(None),
+):
+    verify_admin_request(x_telegram_init_data, x_telegram_user_id)
     stats = await get_admin_stats()
     return JSONResponse(stats)
 
 
 @app.get("/api/admin/users")
-async def admin_users_api(x_telegram_init_data: Optional[str] = Header(None)):
-    verify_admin_request(x_telegram_init_data)
+async def admin_users_api(
+    x_telegram_init_data: Optional[str] = Header(None),
+    x_telegram_user_id: Optional[str] = Header(None),
+):
+    verify_admin_request(x_telegram_init_data, x_telegram_user_id)
     users = await get_all_users()
     data = []
     for u in users:
@@ -431,8 +498,9 @@ async def admin_users_api(x_telegram_init_data: Optional[str] = Header(None)):
 async def admin_give_pro_api(
     payload: AdminGiveProRequest,
     x_telegram_init_data: Optional[str] = Header(None),
+    x_telegram_user_id: Optional[str] = Header(None),
 ):
-    verify_admin_request(x_telegram_init_data)
+    verify_admin_request(x_telegram_init_data, x_telegram_user_id)
     user = await admin_grant_pro(payload.telegram_id, payload.days)
     return JSONResponse({
         "success": True,
@@ -449,8 +517,9 @@ async def admin_give_pro_api(
 async def admin_revoke_pro_api(
     payload: AdminRevokeProRequest,
     x_telegram_init_data: Optional[str] = Header(None),
+    x_telegram_user_id: Optional[str] = Header(None),
 ):
-    verify_admin_request(x_telegram_init_data)
+    verify_admin_request(x_telegram_init_data, x_telegram_user_id)
     user = await admin_revoke_pro(payload.telegram_id)
     if not user:
         raise HTTPException(status_code=404, detail="Пользователь не найден")
@@ -461,9 +530,12 @@ async def admin_revoke_pro_api(
 
 
 @app.get("/api/admin/backup")
-async def admin_backup_api(x_telegram_init_data: Optional[str] = Header(None)):
+async def admin_backup_api(
+    x_telegram_init_data: Optional[str] = Header(None),
+    x_telegram_user_id: Optional[str] = Header(None),
+):
     """Резервная копия базы данных пользователей (JSON)."""
-    verify_admin_request(x_telegram_init_data)
+    verify_admin_request(x_telegram_init_data, x_telegram_user_id)
     data = await export_database_json()
     return JSONResponse(data)
 
@@ -472,9 +544,10 @@ async def admin_backup_api(x_telegram_init_data: Optional[str] = Header(None)):
 async def admin_restore_api(
     payload: dict = Body(...),
     x_telegram_init_data: Optional[str] = Header(None),
+    x_telegram_user_id: Optional[str] = Header(None),
 ):
     """Восстановление базы данных пользователей из JSON."""
-    verify_admin_request(x_telegram_init_data)
+    verify_admin_request(x_telegram_init_data, x_telegram_user_id)
     added, updated = await import_database_json(payload)
     return JSONResponse({
         "success": True,

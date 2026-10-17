@@ -152,6 +152,7 @@ async def get_or_create_user(
             session.add(user)
             await session.commit()
             await session.refresh(user)
+            print(f"[DB] New user registered: ID={tid}, username={username}, name={first_name}")
         else:
             updated = False
             # Если это администратор, гарантируем активный PRO навсегда
