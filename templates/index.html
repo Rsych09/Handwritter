@@ -1499,26 +1499,36 @@
             }
         ];
 
-        // Toast Helper
-        function showToast(message, isError = false) {
+        // Toast Helper with Loading Spinner and Timer management
+        let toastTimer = null;
+        function showToast(message, isError = false, isLoading = false) {
             const toast = document.getElementById('toast');
             const toastMessage = document.getElementById('toastMessage');
             const toastIcon = document.getElementById('toastIcon');
+            if (!toast || !toastMessage || !toastIcon) return;
 
             toastMessage.innerText = message;
             if (isError) {
                 toastIcon.className = "w-6 h-6 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center shrink-0";
                 toastIcon.innerHTML = `<i data-lucide="alert-circle" class="w-3.5 h-3.5"></i>`;
+            } else if (isLoading) {
+                toastIcon.className = "w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0";
+                toastIcon.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i>`;
             } else {
                 toastIcon.className = "w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0";
                 toastIcon.innerHTML = `<i data-lucide="check" class="w-3.5 h-3.5"></i>`;
             }
-            lucide.createIcons();
+            if (window.lucide && typeof window.lucide.createIcons === 'function') {
+                lucide.createIcons();
+            }
 
             toast.classList.remove('translate-y-20', 'opacity-0');
-            setTimeout(() => {
-                toast.classList.add('translate-y-20', 'opacity-0');
-            }, 2800);
+            if (toastTimer) clearTimeout(toastTimer);
+            if (!isLoading) {
+                toastTimer = setTimeout(() => {
+                    toast.classList.add('translate-y-20', 'opacity-0');
+                }, 3200);
+            }
         }
 
         // Tab Navigation
@@ -2173,49 +2183,107 @@ S(N) = 1 / ((1 - P) + P/N)
 
             // Copy to Clipboard Button
             const copyBtn = document.createElement('button');
-            copyBtn.className = "px-3 py-1.5 bg-[#141418] hover:bg-[#1c1c22] text-zinc-300 hover:text-white rounded-xl text-xs font-medium flex items-center gap-1.5 border border-zinc-800 transition-colors cursor-pointer shadow-sm";
+            copyBtn.className = "px-3 py-1.5 bg-[#141418] hover:bg-[#1c1c22] text-zinc-300 hover:text-white rounded-xl text-xs font-medium flex items-center gap-1.5 border border-zinc-800 transition-all cursor-pointer shadow-sm active:scale-95";
             copyBtn.innerHTML = `<i data-lucide="copy" class="w-3.5 h-3.5 text-zinc-400"></i> Копировать`;
             copyBtn.title = "Скопировать лист в буфер обмена";
             copyBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                canvas.toBlob(blob => {
-                    if (!blob) {
-                        showToast('Не удалось скопировать', true);
-                        return;
-                    }
-                    try {
-                        navigator.clipboard.write([
-                            new ClipboardItem({ 'image/png': blob })
-                        ]).then(() => {
-                            showToast(`Лист ${pageNum} скопирован в буфер!`);
-                        }).catch(err => {
-                            showToast('Буфер обмена недоступен в этом браузере', true);
-                        });
-                    } catch (e) {
-                        showToast('Ошибка при копировании', true);
-                    }
-                }, 'image/png');
+                if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+                const origCopyHtml = copyBtn.innerHTML;
+                copyBtn.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin text-zinc-400"></i>`;
+                if (window.lucide) lucide.createIcons();
+
+                setTimeout(() => {
+                    canvas.toBlob(blob => {
+                        if (!blob) {
+                            showToast('Не удалось скопировать', true);
+                            copyBtn.innerHTML = origCopyHtml;
+                            if (window.lucide) lucide.createIcons();
+                            return;
+                        }
+                        try {
+                            navigator.clipboard.write([
+                                new ClipboardItem({ 'image/png': blob })
+                            ]).then(() => {
+                                if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+                                copyBtn.innerHTML = `<i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> Скопировано!`;
+                                if (window.lucide) lucide.createIcons();
+                                showToast(`Лист ${pageNum} скопирован в буфер!`);
+                            }).catch(err => {
+                                showToast('Буфер обмена недоступен в этом браузере', true);
+                                copyBtn.innerHTML = origCopyHtml;
+                                if (window.lucide) lucide.createIcons();
+                            });
+                        } catch (e) {
+                            showToast('Ошибка при копировании', true);
+                            copyBtn.innerHTML = origCopyHtml;
+                            if (window.lucide) lucide.createIcons();
+                        } finally {
+                            setTimeout(() => {
+                                copyBtn.innerHTML = origCopyHtml;
+                                if (window.lucide) lucide.createIcons();
+                            }, 2000);
+                        }
+                    }, 'image/png');
+                }, 30);
             });
 
-            // Download PNG Button (Works with Telegram bot send)
+            // Download PNG Button (Instant visual feedback + Telegram send)
             const dlBtn = document.createElement('button');
-            dlBtn.className = "px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-xl text-xs font-medium flex items-center gap-1.5 border border-zinc-700/60 transition-colors cursor-pointer shadow-sm";
+            dlBtn.className = "px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-xl text-xs font-medium flex items-center gap-1.5 border border-zinc-700/60 transition-all cursor-pointer shadow-sm active:scale-95";
             dlBtn.innerHTML = `<i data-lucide="download" class="w-3.5 h-3.5 text-zinc-300"></i> PNG`;
             dlBtn.title = "Скачать этот лист в высоком качестве";
             dlBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                canvas.toBlob(async (blob) => {
-                    if (!blob) {
-                        showToast('Ошибка при формировании изображения', true);
-                        return;
-                    }
-                    await handleExportDownload(
-                        blob,
-                        `handwritten_page_${pageNum}.png`,
-                        'image/png',
-                        `✍️ Лист ${pageNum} в оригинальном качестве (PNG)`
-                    );
-                }, 'image/png');
+                if (dlBtn.dataset.busy === "1") return;
+                dlBtn.dataset.busy = "1";
+
+                // 1. Мгновенная тактильная отдача на пальце
+                if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+
+                // 2. Мгновенная смена состояния кнопки на лоадер
+                const origHtml = dlBtn.innerHTML;
+                dlBtn.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin text-amber-400"></i> Отправка...`;
+                dlBtn.classList.add('opacity-80', 'pointer-events-none', 'ring-1', 'ring-amber-500/50');
+                if (window.lucide) lucide.createIcons();
+
+                // 3. Мгновенный информативный тост со спиннером
+                showToast(`Формируем и отправляем лист ${pageNum}...`, false, true);
+
+                // Даем браузеру отрисовать анимацию лоадера перед конвертацией Canvas
+                setTimeout(() => {
+                    canvas.toBlob(async (blob) => {
+                        if (!blob) {
+                            showToast('Ошибка при формировании изображения', true);
+                            dlBtn.innerHTML = origHtml;
+                            dlBtn.classList.remove('opacity-80', 'pointer-events-none', 'ring-1', 'ring-amber-500/50');
+                            dlBtn.dataset.busy = "0";
+                            if (window.lucide) lucide.createIcons();
+                            return;
+                        }
+                        try {
+                            await handleExportDownload(
+                                blob,
+                                `handwritten_page_${pageNum}.png`,
+                                'image/png',
+                                `✍️ Лист ${pageNum} в оригинальном качестве (PNG)`
+                            );
+                            dlBtn.innerHTML = `<i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> Отправлен!`;
+                            if (window.lucide) lucide.createIcons();
+                        } catch(err) {
+                            showToast('Не удалось отправить файл', true);
+                            dlBtn.innerHTML = origHtml;
+                            if (window.lucide) lucide.createIcons();
+                        } finally {
+                            setTimeout(() => {
+                                dlBtn.innerHTML = origHtml;
+                                dlBtn.classList.remove('opacity-80', 'pointer-events-none', 'ring-1', 'ring-amber-500/50');
+                                dlBtn.dataset.busy = "0";
+                                if (window.lucide) lucide.createIcons();
+                            }, 2000);
+                        }
+                    }, 'image/png');
+                }, 30);
             });
 
             actionsBar.appendChild(zoomBtn);
@@ -2701,9 +2769,10 @@ S(N) = 1 / ((1 - P) + P/N)
         }
 
         // ==========================================
-        // EXPORT TO PDF & ZIP
+        // EXPORT TO PDF & ZIP (INSTANT FEEDBACK & TELEGRAM SEND)
         // ==========================================
-        document.getElementById('btnDownloadPdf').addEventListener('click', async () => {
+        const btnPdf = document.getElementById('btnDownloadPdf');
+        btnPdf.addEventListener('click', async () => {
             if (generatedCanvases.length === 0) {
                 showToast('Нет страниц для экспорта', true);
                 return;
@@ -2715,37 +2784,66 @@ S(N) = 1 / ((1 - P) + P/N)
                 return;
             }
 
-            showToast('Формирование PDF...');
-            if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-            const { jsPDF } = window.jspdf;
-            const firstCanvas = generatedCanvases[0];
-            const isLandscape = firstCanvas.width > firstCanvas.height;
+            if (btnPdf.dataset.busy === "1") return;
+            btnPdf.dataset.busy = "1";
+            if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
 
-            const pdf = new jsPDF({
-                orientation: isLandscape ? 'landscape' : 'portrait',
-                unit: 'px',
-                format: [firstCanvas.width, firstCanvas.height]
-            });
+            const origPdfHtml = btnPdf.innerHTML;
+            btnPdf.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin text-amber-500"></i> <span class="hidden sm:inline">Сборка PDF...</span><span class="sm:hidden">Сборка...</span>`;
+            btnPdf.classList.add('opacity-80', 'pointer-events-none');
+            if (window.lucide) lucide.createIcons();
 
-            for (let i = 0; i < generatedCanvases.length; i++) {
-                const c = generatedCanvases[i];
-                if (i > 0) {
-                    pdf.addPage([c.width, c.height], isLandscape ? 'landscape' : 'portrait');
+            showToast('Формирование и отправка PDF в Telegram...', false, true);
+
+            setTimeout(async () => {
+                try {
+                    const { jsPDF } = window.jspdf;
+                    const firstCanvas = generatedCanvases[0];
+                    const isLandscape = firstCanvas.width > firstCanvas.height;
+
+                    const pdf = new jsPDF({
+                        orientation: isLandscape ? 'landscape' : 'portrait',
+                        unit: 'px',
+                        format: [firstCanvas.width, firstCanvas.height]
+                    });
+
+                    for (let i = 0; i < generatedCanvases.length; i++) {
+                        const c = generatedCanvases[i];
+                        if (i > 0) {
+                            pdf.addPage([c.width, c.height], isLandscape ? 'landscape' : 'portrait');
+                        }
+                        const imgData = c.toDataURL('image/jpeg', 0.95);
+                        pdf.addImage(imgData, 'JPEG', 0, 0, c.width, c.height);
+                    }
+
+                    const pdfBlob = pdf.output('blob');
+                    await handleExportDownload(
+                        pdfBlob,
+                        'handwritten_notebook.pdf',
+                        'application/pdf',
+                        `📄 **Ваш рукописный конспект готов!**\nВсего страниц: ${generatedCanvases.length}\nСоздано в Handwriter Studio ✨`
+                    );
+
+                    btnPdf.innerHTML = `<i data-lucide="check" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600"></i> <span>Отправлен!</span>`;
+                    if (window.lucide) lucide.createIcons();
+                } catch(e) {
+                    console.error('PDF error:', e);
+                    showToast('Ошибка при формировании PDF', true);
+                    btnPdf.innerHTML = origPdfHtml;
+                    if (window.lucide) lucide.createIcons();
+                } finally {
+                    setTimeout(() => {
+                        btnPdf.innerHTML = origPdfHtml;
+                        btnPdf.classList.remove('opacity-80', 'pointer-events-none');
+                        btnPdf.dataset.busy = "0";
+                        if (window.lucide) lucide.createIcons();
+                    }, 2500);
                 }
-                const imgData = c.toDataURL('image/jpeg', 0.95);
-                pdf.addImage(imgData, 'JPEG', 0, 0, c.width, c.height);
-            }
-
-            const pdfBlob = pdf.output('blob');
-            await handleExportDownload(
-                pdfBlob,
-                'handwritten_notebook.pdf',
-                'application/pdf',
-                `📄 **Ваш рукописный конспект готов!**\nВсего страниц: ${generatedCanvases.length}\nСоздано в Handwriter Studio ✨`
-            );
+            }, 30);
         });
 
-        document.getElementById('btnDownloadZip').addEventListener('click', () => {
+        const btnZip = document.getElementById('btnDownloadZip');
+        btnZip.addEventListener('click', () => {
             if (generatedCanvases.length === 0) {
                 showToast('Нет страниц для экспорта', true);
                 return;
@@ -2757,24 +2855,55 @@ S(N) = 1 / ((1 - P) + P/N)
                 return;
             }
 
-            showToast('Создание ZIP архива...');
-            if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-            const zip = new JSZip();
+            if (btnZip.dataset.busy === "1") return;
+            btnZip.dataset.busy = "1";
+            if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
 
-            generatedCanvases.forEach((canvas, index) => {
-                const dataUrl = canvas.toDataURL('image/png');
-                const base64Data = dataUrl.replace(/^data:image\/(png|jpg);base64,/, "");
-                zip.file(`handwritten_page_${index + 1}.png`, base64Data, { base64: true });
-            });
+            const origZipHtml = btnZip.innerHTML;
+            btnZip.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin text-amber-400"></i> <span class="hidden sm:inline">Сборка ZIP...</span><span class="sm:hidden">Сборка...</span>`;
+            btnZip.classList.add('opacity-80', 'pointer-events-none');
+            if (window.lucide) lucide.createIcons();
 
-            zip.generateAsync({ type: "blob" }).then(async function(content) {
-                await handleExportDownload(
-                    content,
-                    'handwritten_notebook.zip',
-                    'application/zip',
-                    `📦 **Ваш архив с конспектом готов!**\nСодержит ${generatedCanvases.length} стр. в формате PNG высокого разрешения.`
-                );
-            });
+            showToast('Создание и отправка ZIP архива...', false, true);
+
+            setTimeout(() => {
+                try {
+                    const zip = new JSZip();
+                    generatedCanvases.forEach((canvas, index) => {
+                        const dataUrl = canvas.toDataURL('image/png');
+                        const base64Data = dataUrl.replace(/^data:image\/(png|jpg);base64,/, "");
+                        zip.file(`handwritten_page_${index + 1}.png`, base64Data, { base64: true });
+                    });
+
+                    zip.generateAsync({ type: "blob" }).then(async function(content) {
+                        try {
+                            await handleExportDownload(
+                                content,
+                                'handwritten_notebook.zip',
+                                'application/zip',
+                                `📦 **Ваш архив с конспектом готов!**\nСодержит ${generatedCanvases.length} стр. в формате PNG высокого разрешения.`
+                            );
+                            btnZip.innerHTML = `<i data-lucide="check" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400"></i> <span>Отправлен!</span>`;
+                            if (window.lucide) lucide.createIcons();
+                        } catch(err) {
+                            showToast('Ошибка при отправке ZIP', true);
+                        } finally {
+                            setTimeout(() => {
+                                btnZip.innerHTML = origZipHtml;
+                                btnZip.classList.remove('opacity-80', 'pointer-events-none');
+                                btnZip.dataset.busy = "0";
+                                if (window.lucide) lucide.createIcons();
+                            }, 2500);
+                        }
+                    });
+                } catch(e) {
+                    btnZip.innerHTML = origZipHtml;
+                    btnZip.classList.remove('opacity-80', 'pointer-events-none');
+                    btnZip.dataset.busy = "0";
+                    if (window.lucide) lucide.createIcons();
+                    showToast('Ошибка создания архива', true);
+                }
+            }, 30);
         });
 
         // ==========================================
