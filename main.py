@@ -34,6 +34,7 @@ from database import (
     get_or_create_user,
     AsyncSessionLocal,
     ADMIN_IDS,
+    is_admin_id,
     get_admin_stats,
     admin_grant_pro,
     admin_revoke_pro,
@@ -326,25 +327,41 @@ async def get_user_status(
     if raw_init_data:
         user_info = validate_telegram_init_data(raw_init_data)
         if user_info and "id" in user_info:
-            user = await get_or_create_user(
-                telegram_id=user_info["id"],
-                username=user_info.get("username"),
-                first_name=user_info.get("first_name"),
-            )
-            is_pro = user.check_pro_active()
-            is_admin = user.telegram_id in ADMIN_IDS
-            return JSONResponse({
-                "authenticated": True,
-                "user": {
-                    "telegram_id": user.telegram_id,
-                    "first_name": user.first_name or "Пользователь",
-                    "username": user.username,
-                    "is_pro": is_pro,
-                    "is_admin": is_admin,
-                    "pro_expires_at": user.pro_expires_at.isoformat() if user.pro_expires_at else None,
-                    "stars_spent": user.stars_spent,
-                }
-            })
+            tg_id = int(user_info["id"])
+            is_admin = is_admin_id(tg_id)
+            try:
+                user = await get_or_create_user(
+                    telegram_id=tg_id,
+                    username=user_info.get("username"),
+                    first_name=user_info.get("first_name"),
+                )
+                is_pro = user.check_pro_active() or is_admin
+                return JSONResponse({
+                    "authenticated": True,
+                    "user": {
+                        "telegram_id": user.telegram_id,
+                        "first_name": user.first_name or user_info.get("first_name", "Пользователь"),
+                        "username": user.username or user_info.get("username"),
+                        "is_pro": is_pro,
+                        "is_admin": is_admin,
+                        "pro_expires_at": user.pro_expires_at.isoformat() if user.pro_expires_at else None,
+                        "stars_spent": user.stars_spent,
+                    }
+                })
+            except Exception as e:
+                print(f"[ERROR] /api/user-status DB fallback: {e}")
+                return JSONResponse({
+                    "authenticated": True,
+                    "user": {
+                        "telegram_id": tg_id,
+                        "first_name": user_info.get("first_name", "Пользователь"),
+                        "username": user_info.get("username"),
+                        "is_pro": is_admin,
+                        "is_admin": is_admin,
+                        "pro_expires_at": None,
+                        "stars_spent": 0,
+                    }
+                })
 
     # Гостевой режим (локальный браузер вне Telegram)
     return JSONResponse({
@@ -378,9 +395,9 @@ def verify_admin_request(x_telegram_init_data: Optional[str]) -> int:
     if not x_telegram_init_data:
         raise HTTPException(status_code=401, detail="Требуется авторизация Telegram WebApp.")
     user_info = validate_telegram_init_data(x_telegram_init_data)
-    if not user_info or user_info.get("id") not in ADMIN_IDS:
+    if not user_info or not is_admin_id(user_info.get("id")):
         raise HTTPException(status_code=403, detail="Доступ разрешен только Создателю / Администратору.")
-    return user_info["id"]
+    return int(user_info["id"])
 
 
 @app.get("/api/admin/stats")

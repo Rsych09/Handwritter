@@ -911,6 +911,17 @@
             try {
                 tg.ready();
                 tg.expand();
+
+                // Мгновенная идентификация Создателя
+                const earlyUid = tg?.initDataUnsafe?.user?.id;
+                if (earlyUid && (earlyUid === 1109865120 || String(earlyUid) === '1109865120')) {
+                    currentUser.is_admin = true;
+                    currentUser.is_pro = true;
+                    currentUser.telegram_id = earlyUid;
+                    currentUser.first_name = tg.initDataUnsafe.user.first_name || 'Создатель';
+                    updateUserUI();
+                }
+
                 // Fullscreen only on computer or tablet as requested
                 if (isDesktopOrTablet() && typeof tg.requestFullscreen === 'function' && !tg.isFullscreen) {
                     tg.requestFullscreen();
@@ -1019,6 +1030,16 @@
         let availablePlans = [];
 
         async function fetchUserStatus() {
+            // Мгновенная проверка Telegram initDataUnsafe для Создателя
+            const clientUserId = tg?.initDataUnsafe?.user?.id;
+            if (clientUserId && (clientUserId === 1109865120 || String(clientUserId) === '1109865120')) {
+                currentUser.is_admin = true;
+                currentUser.is_pro = true;
+                currentUser.telegram_id = clientUserId;
+                currentUser.first_name = tg.initDataUnsafe.user.first_name || 'Создатель';
+                updateUserUI();
+            }
+
             try {
                 const initData = tg?.initData || '';
                 const res = await fetch('/api/user-status', {
@@ -1027,6 +1048,10 @@
                 const data = await res.json();
                 if (data && data.user) {
                     currentUser = data.user;
+                    if (clientUserId && (clientUserId === 1109865120 || String(clientUserId) === '1109865120')) {
+                        currentUser.is_admin = true;
+                        currentUser.is_pro = true;
+                    }
                     updateUserUI();
                 }
             } catch (err) {
@@ -3279,6 +3304,7 @@ S(N) = 1 / ((1 - P) + P/N)
         // Initialize App
         window.addEventListener('load', () => {
             fetchUserStatus();
+            setTimeout(fetchUserStatus, 400);
             loadPlansList();
             restoreFromLocalStorage();
             updateStats();

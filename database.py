@@ -14,7 +14,7 @@ from sqlalchemy import (
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import declarative_base, relationship
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./handwriter.db").strip()
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./handwriter.db").strip().strip("'\"")
 
 # Нормализация PostgreSQL URL для SQLAlchemy asyncpg (Render/Neon)
 if DATABASE_URL.startswith("postgres://"):
@@ -25,14 +25,29 @@ elif DATABASE_URL.startswith("postgresql://") and not DATABASE_URL.startswith("p
 if "sslmode=" in DATABASE_URL:
     DATABASE_URL = DATABASE_URL.replace("sslmode=", "ssl=")
 
+if "render.com" in DATABASE_URL and "ssl=" not in DATABASE_URL:
+    sep = "&" if "?" in DATABASE_URL else "?"
+    DATABASE_URL = f"{DATABASE_URL}{sep}ssl=require"
+
 # Список ID администраторов (по умолчанию 1109865120)
 ADMIN_IDS = {1109865120}
-_admin_env = os.getenv("ADMIN_IDS", "")
+_admin_env = os.getenv("ADMIN_IDS", "1109865120")
 if _admin_env:
-    for _aid in _admin_env.split(","):
+    for _aid in str(_admin_env).split(","):
         _aid = _aid.strip()
         if _aid.isdigit():
             ADMIN_IDS.add(int(_aid))
+
+
+def is_admin_id(tid: Optional[Any]) -> bool:
+    """Безопасная проверка ID администратора/создателя."""
+    if tid is None:
+        return False
+    try:
+        return int(tid) in {int(x) for x in ADMIN_IDS}
+    except (ValueError, TypeError):
+        return False
+
 
 engine_kwargs = {"echo": False}
 if "sqlite" in DATABASE_URL:
@@ -62,15 +77,13 @@ class User(Base):
 
     def check_pro_active(self) -> bool:
         """Проверяет, активен ли PRO-статус (для администратора всегда True)."""
-        if self.telegram_id in ADMIN_IDS:
+        if is_admin_id(self.telegram_id):
             return True
         if not self.is_pro:
             return False
-        # Если дата окончания не установлена (None) — это вечная подписка (Lifetime)
         if self.pro_expires_at is None:
             return True
         now = datetime.now(timezone.utc)
-        # Если время с таймзоной или без, нормализуем
         expires = self.pro_expires_at
         if expires.tzinfo is None:
             expires = expires.replace(tzinfo=timezone.utc)
@@ -78,7 +91,7 @@ class User(Base):
 
     @property
     def is_admin(self) -> bool:
-        return self.telegram_id in ADMIN_IDS
+        return is_admin_id(self.telegram_id)
 
 
 class Payment(Base):
@@ -97,9 +110,22 @@ class Payment(Base):
 
 
 async def init_db():
-    """Создание таблиц при старте сервера."""
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    """Создание таблиц при старте сервера с отказоустойчивым переключением на SQLite."""
+    global engine, AsyncSessionLocal
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        print("[DB] Tables initialized successfully.")
+    except Exception as e:
+        print(f"[DB WARN] Failed to initialize DB with {DATABASE_URL}: {e}")
+        if "sqlite" not in DATABASE_URL:
+            print("[DB] Automatically falling back to local SQLite database.")
+            fallback_url = "sqlite+aiosqlite:///./handwriter.db"
+            engine = create_async_engine(fallback_url, connect_args={"check_same_thread": False})
+            AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+            print("[DB] SQLite fallback ready.")
 
 
 async def get_or_create_user(
@@ -108,14 +134,16 @@ async def get_or_create_user(
     first_name: Optional[str] = None,
 ) -> User:
     """Получить или зарегистрировать пользователя."""
+    tid = int(telegram_id)
+    is_adm = is_admin_id(tid)
+
     async with AsyncSessionLocal() as session:
-        result = await session.execute(select(User).where(User.telegram_id == telegram_id))
+        result = await session.execute(select(User).where(User.telegram_id == tid))
         user = result.scalars().first()
 
         if not user:
-            is_adm = telegram_id in ADMIN_IDS
             user = User(
-                telegram_id=telegram_id,
+                telegram_id=tid,
                 username=username,
                 first_name=first_name,
                 is_pro=is_adm,
@@ -127,7 +155,7 @@ async def get_or_create_user(
         else:
             updated = False
             # Если это администратор, гарантируем активный PRO навсегда
-            if telegram_id in ADMIN_IDS and not user.is_pro:
+            if is_adm and not user.is_pro:
                 user.is_pro = True
                 user.pro_expires_at = None
                 updated = True

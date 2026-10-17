@@ -24,7 +24,8 @@ from database import (
 
 logger = logging.getLogger("handwriter_bot")
 
-BOT_TOKEN = os.getenv("BOT_TOKEN", "")
+DEFAULT_BOT_TOKEN = "8961172401:AAF-q6J_EbbbmX2VTrxCRA1e9rzj_tHQJ6M"
+BOT_TOKEN = os.getenv("BOT_TOKEN", DEFAULT_BOT_TOKEN)
 WEBAPP_URL = os.getenv("WEBAPP_URL", "https://t.me/HandwriterStudio_bot/app")
 
 # Каталог тарифов за Telegram Stars (валюта XTR)
