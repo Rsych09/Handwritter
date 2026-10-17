@@ -78,6 +78,14 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Handwriter Studio TMA", lifespan=lifespan)
 
+@app.middleware("http")
+async def log_requests_middleware(request: Request, call_next):
+    user_agent = request.headers.get("user-agent", "unknown")
+    client_ip = request.headers.get("cf-connecting-ip") or request.headers.get("x-forwarded-for") or (request.client.host if request.client else "unknown")
+    print(f"[REQ] {request.method} {request.url.path} from {client_ip} | UA: {user_agent[:60]}")
+    response = await call_next(request)
+    return response
+
 # Монтируем статические папки для прямого доступа браузера
 app.mount("/assets", StaticFiles(directory=str(ASSETS_DIR)), name="assets")
 app.mount("/fonts", StaticFiles(directory=str(FONTS_DIR)), name="fonts")

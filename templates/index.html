@@ -19,9 +19,6 @@
             try {
                 window.Telegram.WebApp.ready();
                 window.Telegram.WebApp.expand();
-                if (typeof window.Telegram.WebApp.requestFullscreen === 'function' && !window.Telegram.WebApp.isFullscreen) {
-                    window.Telegram.WebApp.requestFullscreen();
-                }
             } catch (e) {
                 console.warn('Early Telegram WebApp init warning:', e);
             }
@@ -842,12 +839,20 @@
         // ==========================================
         // 🌟 TELEGRAM WEBAPP SDK & USER STATE
         // ==========================================
+        function isDesktopOrTablet() {
+            const p = tg?.platform || '';
+            if (['tdesktop', 'macos', 'web', 'weba'].includes(p)) return true;
+            if (window.innerWidth >= 768) return true;
+            return false;
+        }
+
         const tg = window.Telegram?.WebApp;
         if (tg) {
             try {
                 tg.ready();
                 tg.expand();
-                if (typeof tg.requestFullscreen === 'function' && !tg.isFullscreen) {
+                // Fullscreen only on computer or tablet as requested
+                if (isDesktopOrTablet() && typeof tg.requestFullscreen === 'function' && !tg.isFullscreen) {
                     tg.requestFullscreen();
                 }
                 if (tg.setHeaderColor) tg.setHeaderColor('#0f0f12');
@@ -910,16 +915,15 @@
             });
         }
 
-        // Auto-request fullscreen on first user interaction for Telegram Desktop / Tablet
+        // Auto-request fullscreen on first user interaction for Telegram Desktop / Tablet only
         const autoFullscreenHandler = () => {
-            if (tg && typeof tg.requestFullscreen === 'function' && !tg.isFullscreen) {
+            if (isDesktopOrTablet() && tg && typeof tg.requestFullscreen === 'function' && !tg.isFullscreen) {
                 try {
                     tg.requestFullscreen();
                 } catch(e) {}
             }
         };
         window.addEventListener('click', autoFullscreenHandler, { once: true });
-        window.addEventListener('touchstart', autoFullscreenHandler, { once: true });
 
         // Telegram WebApp fullscreen events
         if (tg && typeof tg.onEvent === 'function') {
