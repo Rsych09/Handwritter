@@ -63,6 +63,18 @@ async def lifespan(app: FastAPI):
         print("[INFO] Starting Telegram Bot polling in background...")
         polling_task = asyncio.create_task(dp.start_polling(bot))
 
+        # Автоматически обновляем кнопку Menu Button на актуальный WEBAPP_URL
+        webapp_url = os.getenv("WEBAPP_URL", "")
+        if webapp_url and webapp_url.startswith("https://"):
+            try:
+                from aiogram.types import MenuButtonWebApp, WebAppInfo
+                await bot.set_chat_menu_button(
+                    menu_button=MenuButtonWebApp(text="Studio ✍️", web_app=WebAppInfo(url=webapp_url))
+                )
+                print(f"[INFO] Telegram Menu Button auto-configured: {webapp_url}")
+            except Exception as e:
+                print(f"[WARN] Could not auto-set chat menu button: {e}")
+
     yield
 
     print("[INFO] Shutting down Handwriter Studio...")
@@ -89,6 +101,12 @@ async def log_requests_middleware(request: Request, call_next):
 # Монтируем статические папки для прямого доступа браузера
 app.mount("/assets", StaticFiles(directory=str(ASSETS_DIR)), name="assets")
 app.mount("/fonts", StaticFiles(directory=str(FONTS_DIR)), name="fonts")
+
+
+@app.get("/health")
+async def healthcheck():
+    """Эндпоинт проверки работоспособности для Render и UptimeRobot."""
+    return JSONResponse({"status": "ok", "service": "Handwriter Studio"})
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -450,13 +468,16 @@ async def create_invoice(
     })
 
 
-def open_browser():
+def open_browser(port: int = 8000):
     """Автоматически открывает генератор в браузере по умолчанию при локальном запуске."""
-    webbrowser.open("http://127.0.0.1:8000")
+    webbrowser.open(f"http://127.0.0.1:{port}")
 
 
 if __name__ == "__main__":
     import uvicorn
-    # Если не в docker / не на сервере, открываем локально
-    threading.Timer(1.5, open_browser).start()
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=False)
+    host = os.getenv("HOST", "0.0.0.0")
+    port = int(os.getenv("PORT", "8000"))
+    # Открываем браузер только при локальном запуске на ПК (Windows)
+    if not os.getenv("RENDER") and not os.getenv("DYNO") and os.name == "nt":
+        threading.Timer(1.5, lambda: open_browser(port)).start()
+    uvicorn.run("main:app", host=host, port=port, reload=False)
