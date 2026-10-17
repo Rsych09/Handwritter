@@ -41,6 +41,8 @@ from database import (
     get_all_users,
     export_database_json,
     import_database_json,
+    engine,
+    DATABASE_URL,
 )
 from auth import validate_telegram_init_data
 from bot import bot, dp, PLANS, generate_stars_invoice
@@ -494,6 +496,38 @@ async def admin_users_api(
     return JSONResponse(data)
 
 
+@app.get("/api/admin/db-diag")
+async def admin_db_diag_api(
+    x_telegram_init_data: Optional[str] = Header(None),
+    x_telegram_user_id: Optional[str] = Header(None),
+):
+    """Диагностический эндпоинт для проверки статуса БД и подключения."""
+    verify_admin_request(x_telegram_init_data, x_telegram_user_id)
+    import traceback
+    dialect = engine.dialect.name
+    masked_url = DATABASE_URL
+    if "@" in masked_url:
+        proto_and_creds, host_and_db = masked_url.split("@", 1)
+        proto = proto_and_creds.split("://")[0]
+        masked_url = f"{proto}://***:***@{host_and_db}"
+    
+    test_result = "unknown"
+    test_error = None
+    try:
+        test_u = await get_or_create_user(telegram_id=1109865120)
+        test_result = f"success (admin_user={test_u.telegram_id}, is_pro={test_u.is_pro})"
+    except Exception as e:
+        test_result = "failed"
+        test_error = traceback.format_exc()
+
+    return JSONResponse({
+        "dialect": dialect,
+        "masked_database_url": masked_url,
+        "test_operation": test_result,
+        "test_error": test_error,
+    })
+
+
 @app.post("/api/admin/give-pro")
 async def admin_give_pro_api(
     payload: AdminGiveProRequest,
@@ -501,16 +535,25 @@ async def admin_give_pro_api(
     x_telegram_user_id: Optional[str] = Header(None),
 ):
     verify_admin_request(x_telegram_init_data, x_telegram_user_id)
-    user = await admin_grant_pro(payload.telegram_id, payload.days)
-    return JSONResponse({
-        "success": True,
-        "message": f"PRO успешно выдан пользователю {payload.telegram_id}",
-        "user": {
-            "telegram_id": user.telegram_id,
-            "is_pro": user.is_pro,
-            "pro_expires_at": user.pro_expires_at.isoformat() if user.pro_expires_at else None
-        }
-    })
+    try:
+        user = await admin_grant_pro(payload.telegram_id, payload.days)
+        return JSONResponse({
+            "success": True,
+            "message": f"PRO успешно выдан пользователю {payload.telegram_id}",
+            "user": {
+                "telegram_id": user.telegram_id,
+                "is_pro": user.is_pro,
+                "pro_expires_at": user.pro_expires_at.isoformat() if user.pro_expires_at else None
+            }
+        })
+    except Exception as e:
+        import traceback
+        trace = traceback.format_exc()
+        print(f"[ERROR] /api/admin/give-pro: {e}\n{trace}")
+        return JSONResponse(
+            {"success": False, "error": str(e), "traceback": trace},
+            status_code=500
+        )
 
 
 @app.post("/api/admin/revoke-pro")

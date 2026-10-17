@@ -49,6 +49,16 @@ def is_admin_id(tid: Optional[Any]) -> bool:
         return False
 
 
+def utc_now() -> datetime:
+    """
+    Возвращает текущее время UTC в naive-формате (без tzinfo).
+    Критически важно для PostgreSQL + asyncpg:
+    колонки TIMESTAMP WITHOUT TIME ZONE вызывают ошибку при передаче aware datetime:
+    'can't subtract offset-naive and offset-aware datetimes'.
+    """
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
 engine_kwargs = {"echo": False}
 if "sqlite" in DATABASE_URL:
     engine_kwargs["connect_args"] = {"check_same_thread": False}
@@ -71,7 +81,7 @@ class User(Base):
     is_pro = Column(Boolean, default=False, nullable=False)
     pro_expires_at = Column(DateTime, nullable=True)
     stars_spent = Column(Integer, default=0, nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at = Column(DateTime, default=utc_now, nullable=False)
 
     payments = relationship("Payment", back_populates="user", cascade="all, delete-orphan")
 
@@ -83,10 +93,10 @@ class User(Base):
             return False
         if self.pro_expires_at is None:
             return True
-        now = datetime.now(timezone.utc)
+        now = utc_now()
         expires = self.pro_expires_at
-        if expires.tzinfo is None:
-            expires = expires.replace(tzinfo=timezone.utc)
+        if expires.tzinfo is not None:
+            expires = expires.astimezone(timezone.utc).replace(tzinfo=None)
         return expires > now
 
     @property
@@ -104,7 +114,7 @@ class Payment(Base):
     plan_id = Column(String(64), nullable=False)
     stars_amount = Column(Integer, nullable=False)
     status = Column(String(32), default="completed", nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at = Column(DateTime, default=utc_now, nullable=False)
 
     user = relationship("User", back_populates="payments")
 
@@ -148,6 +158,7 @@ async def get_or_create_user(
                 first_name=first_name,
                 is_pro=is_adm,
                 pro_expires_at=None,
+                created_at=utc_now(),
             )
             session.add(user)
             await session.commit()
@@ -199,7 +210,7 @@ async def apply_payment_subscription(
             return False, user
 
         # Рассчитываем срок действия
-        now = datetime.now(timezone.utc)
+        now = utc_now()
         if duration_days is None:
             # Lifetime
             user.is_pro = True
@@ -208,12 +219,12 @@ async def apply_payment_subscription(
             base_time = now
             if user.is_pro and user.pro_expires_at:
                 current_expires = user.pro_expires_at
-                if current_expires.tzinfo is None:
-                    current_expires = current_expires.replace(tzinfo=timezone.utc)
+                if current_expires.tzinfo is not None:
+                    current_expires = current_expires.astimezone(timezone.utc).replace(tzinfo=None)
                 if current_expires > now:
                     base_time = current_expires  # Продлеваем текущую подписку
             user.is_pro = True
-            user.pro_expires_at = base_time + timedelta(days=duration_days)
+            user.pro_expires_at = (base_time + timedelta(days=duration_days)).replace(tzinfo=None)
 
         user.stars_spent += stars_amount
 
@@ -224,6 +235,7 @@ async def apply_payment_subscription(
             plan_id=plan_id,
             stars_amount=stars_amount,
             status="completed",
+            created_at=utc_now(),
         )
         session.add(payment)
         await session.commit()
@@ -258,7 +270,7 @@ async def admin_grant_pro(telegram_id: int, duration_days: Optional[int] = None)
         res = await session.execute(select(User).where(User.telegram_id == telegram_id))
         user = res.scalars().first()
         if not user:
-            user = User(telegram_id=telegram_id)
+            user = User(telegram_id=telegram_id, created_at=utc_now())
             session.add(user)
             await session.flush()
 
@@ -266,8 +278,8 @@ async def admin_grant_pro(telegram_id: int, duration_days: Optional[int] = None)
         if duration_days is None or duration_days <= 0:
             user.pro_expires_at = None  # Навсегда
         else:
-            now = datetime.now(timezone.utc)
-            user.pro_expires_at = now + timedelta(days=duration_days)
+            now = utc_now()
+            user.pro_expires_at = (now + timedelta(days=duration_days)).replace(tzinfo=None)
 
         await session.commit()
         await session.refresh(user)
@@ -347,7 +359,8 @@ async def import_database_json(data: dict) -> Tuple[int, int]:
             pro_exp = None
             if udata.get("pro_expires_at"):
                 try:
-                    pro_exp = datetime.fromisoformat(udata["pro_expires_at"])
+                    dt = datetime.fromisoformat(udata["pro_expires_at"])
+                    pro_exp = dt.astimezone(timezone.utc).replace(tzinfo=None) if dt.tzinfo is not None else dt
                 except Exception:
                     pass
 
@@ -359,6 +372,7 @@ async def import_database_json(data: dict) -> Tuple[int, int]:
                     is_pro=bool(udata.get("is_pro", False)) or (int(tid) in ADMIN_IDS),
                     pro_expires_at=pro_exp,
                     stars_spent=int(udata.get("stars_spent", 0)),
+                    created_at=utc_now(),
                 )
                 session.add(user)
                 added += 1

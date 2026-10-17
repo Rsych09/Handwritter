@@ -780,59 +780,59 @@
     </div>
 
     <!-- Admin Management Modal (Visible only to Creator/Admin) -->
-    <div id="adminModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4 hidden">
-        <div class="bg-[#121217] border border-purple-500/50 rounded-3xl max-w-2xl w-full p-5 sm:p-7 shadow-[0_0_50px_rgba(168,85,247,0.15)] relative max-h-[92vh] overflow-y-auto">
+    <div id="adminModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-2 sm:p-4 hidden">
+        <div class="bg-[#121217] border border-purple-500/50 rounded-2xl sm:rounded-3xl max-w-2xl w-full p-3.5 sm:p-6 shadow-[0_0_50px_rgba(168,85,247,0.15)] relative max-h-[92vh] overflow-y-auto">
             <!-- Close button -->
-            <button id="btnCloseAdmin" class="absolute top-4 right-4 text-zinc-400 hover:text-white p-2 rounded-xl bg-zinc-800/80 hover:bg-zinc-700 cursor-pointer transition-all">
+            <button id="btnCloseAdmin" class="absolute top-3 right-3 sm:top-4 sm:right-4 text-zinc-400 hover:text-white p-1.5 sm:p-2 rounded-xl bg-zinc-800/80 hover:bg-zinc-700 cursor-pointer transition-all">
                 <i data-lucide="x" class="w-5 h-5"></i>
             </button>
 
             <!-- Modal Header -->
-            <div class="text-center mb-5 sm:mb-6">
-                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-400 text-xs font-semibold mb-2">
+            <div class="text-center mb-4 sm:mb-6 pr-8 sm:pr-0">
+                <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-400 text-xs font-semibold mb-1.5">
                     <i data-lucide="shield-check" class="w-3.5 h-3.5 text-purple-400"></i> Панель Создателя
                 </div>
-                <h3 class="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center justify-center gap-2">
+                <h3 class="text-lg sm:text-2xl font-bold text-white tracking-tight flex items-center justify-center gap-1.5">
                     Управление Studio <span>👑</span>
                 </h3>
-                <p class="text-zinc-400 text-xs mt-1">
+                <p class="text-zinc-400 text-[11px] sm:text-xs mt-0.5">
                     Полный доступ ко всей статистике, пользователям и выдаче подписок
                 </p>
             </div>
 
             <!-- Stats Grid -->
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-5 text-center">
-                <div class="bg-[#181820] p-3 rounded-2xl border border-zinc-800">
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4 text-center">
+                <div class="bg-[#181820] p-2.5 sm:p-3 rounded-2xl border border-zinc-800">
                     <div class="text-zinc-400 text-[10px] uppercase font-bold tracking-wider mb-1">Всего польз.</div>
-                    <div id="adminStatUsers" class="text-lg sm:text-xl font-bold font-mono text-white">0</div>
+                    <div id="adminStatUsers" class="text-base sm:text-xl font-bold font-mono text-white">0</div>
                 </div>
-                <div class="bg-[#181820] p-3 rounded-2xl border border-zinc-800">
+                <div class="bg-[#181820] p-2.5 sm:p-3 rounded-2xl border border-zinc-800">
                     <div class="text-amber-400 text-[10px] uppercase font-bold tracking-wider mb-1">PRO подписки</div>
-                    <div id="adminStatPro" class="text-lg sm:text-xl font-bold font-mono text-amber-300">0</div>
+                    <div id="adminStatPro" class="text-base sm:text-xl font-bold font-mono text-amber-300">0</div>
                 </div>
-                <div class="bg-[#181820] p-3 rounded-2xl border border-zinc-800">
+                <div class="bg-[#181820] p-2.5 sm:p-3 rounded-2xl border border-zinc-800">
                     <div class="text-yellow-400 text-[10px] uppercase font-bold tracking-wider mb-1">Stars получено</div>
-                    <div id="adminStatStars" class="text-lg sm:text-xl font-bold font-mono text-yellow-300">0 ⭐</div>
+                    <div id="adminStatStars" class="text-base sm:text-xl font-bold font-mono text-yellow-300">0 ⭐</div>
                 </div>
-                <div class="bg-[#181820] p-3 rounded-2xl border border-zinc-800">
+                <div class="bg-[#181820] p-2.5 sm:p-3 rounded-2xl border border-zinc-800">
                     <div class="text-emerald-400 text-[10px] uppercase font-bold tracking-wider mb-1">Оплат</div>
-                    <div id="adminStatPayments" class="text-lg sm:text-xl font-bold font-mono text-emerald-300">0</div>
+                    <div id="adminStatPayments" class="text-base sm:text-xl font-bold font-mono text-emerald-300">0</div>
                 </div>
             </div>
 
             <!-- Give PRO Action Section -->
-            <div class="bg-[#16161d] p-4 rounded-2xl border border-zinc-800/80 mb-5">
-                <label class="text-xs font-semibold text-zinc-300 flex items-center gap-1.5 mb-2.5">
+            <div class="bg-[#16161d] p-3 sm:p-4 rounded-2xl border border-zinc-800/80 mb-4">
+                <label class="text-xs font-semibold text-zinc-300 flex items-center gap-1.5 mb-2">
                     <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-400"></i> Ручная выдача PRO доступа
                 </label>
-                <div class="flex flex-col sm:flex-row gap-2 mb-2.5">
-                    <input id="adminTargetTgId" type="text" placeholder="Telegram ID пользователя" class="flex-1 bg-[#0f0f14] border border-zinc-700/80 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500 font-mono" />
-                    <select id="adminDurationSelect" class="bg-[#0f0f14] border border-zinc-700/80 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500">
+                <div class="flex flex-col sm:flex-row gap-2 mb-2">
+                    <input id="adminTargetTgId" type="text" placeholder="Telegram ID пользователя" class="w-full sm:flex-1 min-w-0 bg-[#0f0f14] border border-zinc-700/80 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500 font-mono" />
+                    <select id="adminDurationSelect" class="w-full sm:w-auto bg-[#0f0f14] border border-zinc-700/80 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500">
                         <option value="1">1 день</option>
                         <option value="30">30 дней</option>
                         <option value="0" selected>Навсегда (Lifetime)</option>
                     </select>
-                    <button id="btnAdminGivePro" class="px-4 py-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-black font-semibold text-xs rounded-xl cursor-pointer transition-all active:scale-95">
+                    <button id="btnAdminGivePro" class="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-black font-semibold text-xs rounded-xl cursor-pointer transition-all active:scale-95 shrink-0">
                         Выдать PRO
                     </button>
                 </div>
@@ -840,7 +840,7 @@
             </div>
 
             <!-- Users List Section -->
-            <div class="bg-[#16161d] p-4 rounded-2xl border border-zinc-800/80">
+            <div class="bg-[#16161d] p-3 sm:p-4 rounded-2xl border border-zinc-800/80">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
                     <label class="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
                         <i data-lucide="user" class="w-3.5 h-3.5 text-purple-400"></i> Зарегистрированные пользователи
@@ -1330,34 +1330,34 @@
 
                 users.forEach(u => {
                     const row = document.createElement('div');
-                    row.className = "flex items-center justify-between p-2.5 rounded-xl bg-[#0e0e13] border border-zinc-800 text-xs";
+                    row.className = "flex items-center justify-between p-2 sm:p-2.5 rounded-xl bg-[#0e0e13] border border-zinc-800 text-xs gap-1.5";
                     
                     const isAdm = u.is_admin;
                     const isPro = u.is_pro;
                     const statusBadge = isAdm
-                        ? `<span class="px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-300 font-semibold border border-purple-500/40 text-[10px]">Создатель</span>`
+                        ? `<span class="px-1.5 py-0.5 rounded-md bg-purple-500/20 text-purple-300 font-semibold border border-purple-500/40 text-[9px] sm:text-[10px]">Создатель</span>`
                         : (isPro
-                            ? `<span class="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/40 text-[10px]">PRO</span>`
-                            : `<span class="px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-400 text-[10px]">Free</span>`);
+                            ? `<span class="px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/40 text-[9px] sm:text-[10px]">PRO</span>`
+                            : `<span class="px-1.5 py-0.5 rounded-md bg-zinc-800 text-zinc-400 text-[9px] sm:text-[10px]">Free</span>`);
 
                     const name = u.first_name || (u.username ? `@${u.username}` : 'Аноним');
                     
                     let actionsHtml = '';
                     if (!isAdm) {
                         if (isPro) {
-                            actionsHtml = `<button class="btn-revoke px-2 py-1 rounded-lg bg-red-950/60 hover:bg-red-900 text-red-300 text-[10px] border border-red-800/60 cursor-pointer" data-id="${u.telegram_id}">Снять PRO</button>`;
+                            actionsHtml = `<button class="btn-revoke px-2 py-1 rounded-lg bg-red-950/60 hover:bg-red-900 text-red-300 text-[10px] border border-red-800/60 cursor-pointer shrink-0" data-id="${u.telegram_id}">Снять PRO</button>`;
                         } else {
-                            actionsHtml = `<button class="btn-quick-pro px-2 py-1 rounded-lg bg-amber-950/60 hover:bg-amber-900 text-amber-300 text-[10px] border border-amber-800/60 cursor-pointer" data-id="${u.telegram_id}">Выдать</button>`;
+                            actionsHtml = `<button class="btn-quick-pro px-2 py-1 rounded-lg bg-amber-950/60 hover:bg-amber-900 text-amber-300 text-[10px] border border-amber-800/60 cursor-pointer shrink-0" data-id="${u.telegram_id}">Выдать</button>`;
                         }
                     }
 
                     row.innerHTML = `
-                        <div class="flex items-center gap-1.5 sm:gap-2 min-w-0 overflow-hidden">
-                            <span class="font-mono text-zinc-400 text-[11px] shrink-0">${u.telegram_id}</span>
-                            <span class="font-medium text-white truncate max-w-[85px] sm:max-w-none">${name}</span>
+                        <div class="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1 overflow-hidden">
+                            <span class="font-mono text-zinc-400 text-[10px] sm:text-[11px] shrink-0">${u.telegram_id}</span>
+                            <span class="font-medium text-white truncate text-[11px] sm:text-xs max-w-[80px] sm:max-w-none">${name}</span>
                             <span class="shrink-0">${statusBadge}</span>
                         </div>
-                        <div class="shrink-0 ml-1">${actionsHtml}</div>
+                        <div class="shrink-0">${actionsHtml}</div>
                     `;
 
                     adminUsersList.appendChild(row);

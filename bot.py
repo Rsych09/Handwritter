@@ -117,11 +117,14 @@ async def handle_start(message: Message):
     """Обработчик команды /start."""
     user = message.from_user
     if user:
-        await get_or_create_user(
-            telegram_id=user.id,
-            username=user.username,
-            first_name=user.first_name,
-        )
+        try:
+            await get_or_create_user(
+                telegram_id=user.id,
+                username=user.username,
+                first_name=user.first_name,
+            )
+        except Exception as e:
+            logger.error(f"[BOT] Failed to register user in /start: {e}")
 
     is_admin = user and user.id in ADMIN_IDS
 
@@ -405,11 +408,14 @@ async def handle_show_plans_callback(callback_query):
     """Отображение тарифов по инлайн-кнопке."""
     user = callback_query.from_user
     if user:
-        await get_or_create_user(
-            telegram_id=user.id,
-            username=user.username,
-            first_name=user.first_name,
-        )
+        try:
+            await get_or_create_user(
+                telegram_id=user.id,
+                username=user.username,
+                first_name=user.first_name,
+            )
+        except Exception as e:
+            logger.error(f"[BOT] Callback error registering user: {e}")
     text = (
         "💎 **Премиум возможности Handwriter Studio PRO**\n\n"
         "Откройте приложение и перейдите во вкладку **«Тарифы ⭐»**, чтобы оплатить любой тариф прямо через **Telegram Stars**:\n\n"
@@ -430,11 +436,14 @@ async def handle_any_other_callback(callback_query):
     """Гарантирует регистрацию пользователя при нажатии на любые инлайн-кнопки."""
     user = callback_query.from_user
     if user:
-        await get_or_create_user(
-            telegram_id=user.id,
-            username=user.username,
-            first_name=user.first_name,
-        )
+        try:
+            await get_or_create_user(
+                telegram_id=user.id,
+                username=user.username,
+                first_name=user.first_name,
+            )
+        except Exception as e:
+            logger.error(f"[BOT] Any-callback error registering user: {e}")
     await callback_query.answer()
 
 
@@ -443,11 +452,14 @@ async def handle_any_incoming_message(message: Message):
     """Гарантирует регистрацию пользователя при отправке любого сообщения в бота."""
     user = message.from_user
     if user:
-        await get_or_create_user(
-            telegram_id=user.id,
-            username=user.username,
-            first_name=user.first_name,
-        )
+        try:
+            await get_or_create_user(
+                telegram_id=user.id,
+                username=user.username,
+                first_name=user.first_name,
+            )
+        except Exception as e:
+            logger.error(f"[BOT] Any-message error registering user: {e}")
     is_admin = user and user.id in ADMIN_IDS
     admin_badge = "\n\n👑 **Вы авторизованы как Создатель!**" if is_admin else ""
     text = (
