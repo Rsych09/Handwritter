@@ -1,9 +1,15 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Handwriter Studio — Генератор рукописных конспектов</title>
+    
+    <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+    
     <!-- Tailwind CSS v4 Browser -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <!-- Lucide Icons -->
@@ -26,10 +32,38 @@
     </script>
     
     <style>
-        html, body {
+        :root {
+            --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            --color-bg-base: #09090b;
+            --color-bg-surface: #0f0f14;
+            --color-bg-card: #15151c;
+            --color-bg-input: #0b0b10;
+            --color-border: rgba(255, 255, 255, 0.08);
+            --color-border-hover: rgba(255, 255, 255, 0.16);
+            --color-amber-gold: #f59e0b;
+            --color-amber-glow: rgba(245, 158, 11, 0.2);
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--color-bg-base);
+            color: #ededef;
             max-width: 100vw;
             width: 100%;
             overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .font-mono {
+            font-family: var(--font-mono) !important;
+        }
+
+        @font-face {
+            font-family: 'HandwrittenFont';
+            src: url('/fonts/hand.ttf') format('truetype');
+            font-display: swap;
         }
 
         .no-scrollbar::-webkit-scrollbar {
@@ -40,35 +74,35 @@
             scrollbar-width: none;
         }
 
-        @font-face {
-            font-family: 'HandwrittenFont';
-            src: url('/fonts/hand.ttf') format('truetype');
-        }
-
-        /* Studio Minimalist Scrollbar */
+        /* Studio Ultra-Precision Minimalist Scrollbar */
         ::-webkit-scrollbar {
             width: 5px;
             height: 5px;
         }
         ::-webkit-scrollbar-track {
-            background: #09090b;
+            background: #09090c;
         }
         ::-webkit-scrollbar-thumb {
-            background: #27272a;
+            background: #272732;
             border-radius: 9999px;
+            transition: background 0.2s ease;
         }
         ::-webkit-scrollbar-thumb:hover {
-            background: #3f3f46;
+            background: #3f3f50;
         }
 
-        /* Studio Precision Range Sliders */
+        /* Studio Tactile Range Sliders */
         input[type="range"] {
             -webkit-appearance: none;
             appearance: none;
-            background: #27272a;
+            background: #22222b;
             height: 4px;
-            border-radius: 4px;
+            border-radius: 9999px;
             outline: none;
+            transition: background 0.2s ease;
+        }
+        input[type="range"]:hover {
+            background: #2e2e3a;
         }
         input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
@@ -76,19 +110,22 @@
             width: 15px;
             height: 15px;
             border-radius: 50%;
-            background: #f4f4f5;
+            background: #f4f4f7;
             cursor: pointer;
-            transition: transform 0.12s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.12s ease;
-            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.15);
+            transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.15s ease, background-color 0.15s ease;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.2);
             border: none;
         }
         input[type="range"]::-webkit-slider-thumb:hover {
-            transform: scale(1.25);
+            transform: scale(1.22);
             background: #ffffff;
-            box-shadow: 0 0 10px rgba(229, 169, 60, 0.4), 0 0 0 1px rgba(229, 169, 60, 0.6);
+            box-shadow: 0 0 12px var(--color-amber-glow), 0 0 0 2px var(--color-amber-gold);
+        }
+        input[type="range"]:focus-visible::-webkit-slider-thumb {
+            box-shadow: 0 0 12px var(--color-amber-glow), 0 0 0 2px var(--color-amber-gold);
         }
 
-        /* Clean Number Inputs */
+        /* Precision Clean Number Inputs */
         input[type=number]::-webkit-inner-spin-button, 
         input[type=number]::-webkit-outer-spin-button { 
             -webkit-appearance: none; 
@@ -99,95 +136,125 @@
             appearance: textfield;
         }
 
-        /* Studio Range and Dropzone styling */
+        /* Glassmorphism & Micro-Interactions */
+        .glass-header {
+            background: rgba(15, 15, 20, 0.88);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+        .glass-card {
+            background: #14141a;
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .glass-card:hover {
+            border-color: rgba(255, 255, 255, 0.12);
+        }
 
         /* Dropzone Active Animation */
         .dropzone-active {
-            border-color: #d4a373 !important;
-            background-color: rgba(212, 163, 115, 0.06) !important;
+            border-color: #f59e0b !important;
+            background-color: rgba(245, 158, 11, 0.06) !important;
             transform: scale(1.008);
+        }
+
+        /* Subtle Glow Animation for Active Elements */
+        @keyframes pulse-soft {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.65; transform: scale(0.96); }
+        }
+        .pulse-beacon {
+            animation: pulse-soft 2.4s ease-in-out infinite;
         }
     </style>
 </head>
-<body class="bg-[#09090b] text-[#ededef] font-sans h-screen flex flex-col overflow-hidden antialiased select-none">
+<body class="bg-[#09090b] text-[#ededef] h-screen flex flex-col overflow-hidden select-none">
 
     <!-- Top Studio Navigation Bar -->
-    <header class="bg-[#0f0f12]/95 backdrop-blur-lg px-2 sm:px-6 py-2 sm:py-3 flex justify-between items-center z-30 border-b border-zinc-800/80 shrink-0 w-full max-w-full overflow-hidden">
-        <!-- Studio Brand -->
-        <div class="flex items-center gap-1.5 sm:gap-3.5 shrink min-w-0">
-            <!-- Monogram / Icon -->
-            <div class="w-7 h-7 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-zinc-800 to-zinc-950 flex items-center justify-center text-amber-300/90 shadow-md border border-zinc-700/50 shrink-0">
-                <i data-lucide="pen-tool" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+    <header class="glass-header px-3 sm:px-6 py-2.5 sm:py-3 flex justify-between items-center z-30 border-b border-white/[0.08] shrink-0 w-full max-w-full overflow-hidden">
+        
+        <!-- Studio Brand Lockup -->
+        <div class="flex items-center gap-2 sm:gap-3.5 shrink min-w-0">
+            <!-- Monogram / Pen-Tool Badge -->
+            <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl bg-gradient-to-br from-zinc-800 via-zinc-900 to-black flex items-center justify-center text-amber-400 shadow-[0_2px_10px_rgba(0,0,0,0.5)] border border-white/10 shrink-0 relative group">
+                <i data-lucide="pen-tool" class="w-4 h-4 transition-transform group-hover:scale-110"></i>
+                <span class="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-amber-400 ring-2 ring-zinc-950"></span>
             </div>
+            
             <div class="min-w-0">
-                <div class="flex items-center gap-1 sm:gap-2">
-                    <div class="flex items-baseline gap-1">
-                        <span class="text-xs sm:text-sm font-bold tracking-tight text-white uppercase font-mono truncate">HANDWRITER</span>
-                        <span class="text-[8px] sm:text-[10px] tracking-wider font-semibold text-amber-400 uppercase hidden xs:inline sm:inline">STUDIO</span>
-                    </div>
+                <div class="flex items-center gap-1.5 sm:gap-2">
+                    <span class="text-xs sm:text-sm font-bold tracking-tight text-white uppercase font-mono truncate">HANDWRITER</span>
+                    <span class="text-[9px] sm:text-[10px] tracking-wider font-bold text-zinc-950 bg-gradient-to-r from-amber-400 to-yellow-400 px-1.5 py-0.5 rounded uppercase">STUDIO</span>
+                    <span class="hidden xl:inline text-[10px] font-mono text-zinc-500 bg-zinc-900 px-1.5 py-0.5 rounded border border-zinc-800">v2.1</span>
                 </div>
-                <p class="text-[10px] sm:text-[11px] text-zinc-400 tracking-normal hidden sm:block truncate">Генератор рукописных конспектов</p>
+                <p class="text-[10px] sm:text-[11px] text-zinc-400 tracking-normal hidden sm:block truncate">Архитектурный генератор рукописных конспектов</p>
             </div>
         </div>
 
-        <!-- Live Statistics Chips -->
-        <div class="hidden lg:flex items-center gap-3 bg-[#141418] px-4 py-1.5 rounded-full border border-zinc-800/90 text-xs shrink-0">
+        <!-- Live Statistics Dock (Desktop) -->
+        <div class="hidden lg:flex items-center gap-3.5 bg-[#121218]/90 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/[0.08] text-xs shrink-0 shadow-inner">
             <div class="flex items-center gap-1.5 text-zinc-300">
                 <i data-lucide="layers" class="w-3.5 h-3.5 text-amber-400"></i>
-                Листов: <span id="statPages" class="font-mono font-bold text-white">1</span>
+                <span class="text-zinc-400">Листов:</span>
+                <span id="statPages" class="font-mono font-bold text-white">1</span>
             </div>
-            <span class="text-zinc-700">•</span>
+            <span class="text-zinc-700 font-mono">•</span>
             <div class="flex items-center gap-1.5 text-zinc-300">
                 <i data-lucide="align-left" class="w-3.5 h-3.5 text-zinc-400"></i>
-                Слов: <span id="statWords" class="font-mono font-bold text-zinc-200">0</span>
+                <span class="text-zinc-400">Слов:</span>
+                <span id="statWords" class="font-mono font-semibold text-zinc-200">0</span>
             </div>
-            <span class="text-zinc-700">•</span>
+            <span class="text-zinc-700 font-mono">•</span>
             <div class="flex items-center gap-1.5 text-zinc-300">
                 <i data-lucide="type" class="w-3.5 h-3.5 text-zinc-400"></i>
-                Знаков: <span id="statChars" class="font-mono font-bold text-zinc-200">0</span>
+                <span class="text-zinc-400">Знаков:</span>
+                <span id="statChars" class="font-mono font-semibold text-zinc-200">0</span>
             </div>
-            <span class="text-zinc-700">•</span>
+            <span class="text-zinc-700 font-mono">•</span>
             <div class="flex items-center gap-1.5 text-zinc-400" id="saveIndicator">
-                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                <span class="text-[11px] text-zinc-400">Автосохранение</span>
+                <span class="w-2 h-2 rounded-full bg-emerald-500 pulse-beacon"></span>
+                <span class="text-[11px] text-zinc-400">Синхронизировано</span>
             </div>
         </div>
 
-        <!-- Studio Actions -->
-        <div class="flex items-center gap-1 sm:gap-2 shrink-0">
+        <!-- Studio Actions Button Group -->
+        <div class="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
             <!-- Admin Dashboard Button (Only for Creator) -->
-            <button id="btnOpenAdmin" class="hidden px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer bg-gradient-to-r from-purple-500/25 via-indigo-500/20 to-purple-600/25 text-purple-300 border border-purple-500/60 hover:border-purple-400 shadow-[0_0_12px_rgba(168,85,247,0.2)] active:scale-95 shrink-0" title="Панель Создателя">
+            <button id="btnOpenAdmin" class="hidden px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer bg-gradient-to-r from-purple-500/20 via-indigo-500/15 to-purple-600/20 text-purple-300 border border-purple-500/50 hover:border-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.2)] active:scale-95 shrink-0" title="Панель Создателя">
                 <i data-lucide="shield-check" class="w-3.5 h-3.5 text-purple-400"></i>
-                <span class="hidden sm:inline">Админка</span>
+                <span class="hidden sm:inline">Создатель</span>
                 <span>👑</span>
             </button>
 
             <!-- PRO Tariffs Button -->
-            <button id="btnOpenTariffs" class="px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer bg-gradient-to-r from-amber-500/20 via-yellow-500/15 to-amber-600/20 text-amber-300 border border-amber-500/50 hover:border-amber-400 shadow-sm active:scale-95 shrink-0">
+            <button id="btnOpenTariffs" class="px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer bg-gradient-to-r from-amber-500/20 via-yellow-500/15 to-amber-600/20 text-amber-300 border border-amber-500/50 hover:border-amber-400 shadow-sm active:scale-95 shrink-0">
                 <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-400 hidden xs:inline sm:inline"></i>
                 <span id="headerProStatus">Тарифы ⭐</span>
             </button>
 
-            <button id="btnToggleFullscreen" class="hidden sm:flex px-2.5 py-2 rounded-xl text-xs font-medium text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60 active:scale-95 transition-all cursor-pointer items-center gap-1.5 border border-zinc-800/70" title="На весь экран (ПК и планшет)">
+            <!-- Fullscreen Toggle (PC & Tablet) -->
+            <button id="btnToggleFullscreen" class="hidden sm:flex px-2.5 py-2 rounded-xl text-xs font-medium text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60 active:scale-95 transition-all cursor-pointer items-center gap-1.5 border border-white/[0.06]" title="На весь экран (ПК и планшет)">
                 <i id="fullscreenIcon" data-lucide="fullscreen" class="w-3.5 h-3.5 text-zinc-300"></i>
-                <span id="fullscreenText" class="hidden lg:inline">На весь экран</span>
+                <span id="fullscreenText" class="hidden xl:inline">На весь экран</span>
             </button>
 
-            <button id="btnResetAll" class="hidden md:flex px-2.5 py-2 rounded-xl text-xs font-medium text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60 transition-all cursor-pointer items-center gap-1.5" title="Сбросить все настройки к начальным">
+            <!-- Reset All -->
+            <button id="btnResetAll" class="hidden md:flex px-2.5 py-2 rounded-xl text-xs font-medium text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60 transition-all cursor-pointer items-center gap-1.5 border border-transparent hover:border-zinc-700/60" title="Сбросить все настройки к начальным">
                 <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
                 <span class="hidden sm:inline">Сброс</span>
             </button>
 
-            <button id="btnDownloadZip" class="hidden sm:flex px-3 py-2 rounded-xl text-xs font-medium text-zinc-200 bg-[#16161a] hover:bg-[#1f2026] active:scale-98 transition-all cursor-pointer items-center gap-1.5 border border-zinc-700/60 shadow-sm">
+            <!-- ZIP Archive Export -->
+            <button id="btnDownloadZip" class="hidden sm:flex px-3 py-2 rounded-xl text-xs font-medium text-zinc-200 bg-[#16161e] hover:bg-[#1e1e28] active:scale-98 transition-all cursor-pointer items-center gap-1.5 border border-white/[0.08] shadow-sm">
                 <i data-lucide="archive" class="w-3.5 h-3.5 text-zinc-400"></i>
-                <span>.ZIP</span>
+                <span class="font-mono">.ZIP</span>
             </button>
 
-            <!-- Titanium White Stark Action Button -->
-            <button id="btnDownloadPdf" class="px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-semibold text-zinc-950 bg-zinc-100 hover:bg-white active:scale-98 transition-all cursor-pointer flex items-center gap-1 sm:gap-2 shadow-[0_1px_3px_rgba(0,0,0,0.4)] shrink-0">
-                <i data-lucide="file-down" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+            <!-- Titanium White Primary Action Button (PDF) -->
+            <button id="btnDownloadPdf" class="px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-bold text-zinc-950 bg-white hover:bg-zinc-100 active:scale-98 transition-all cursor-pointer flex items-center gap-1.5 sm:gap-2 shadow-[0_2px_12px_rgba(255,255,255,0.18)] shrink-0">
+                <i data-lucide="file-down" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-zinc-950"></i>
                 <span class="hidden sm:inline">Экспорт в PDF</span>
-                <span class="sm:hidden">PDF</span>
+                <span class="sm:hidden font-mono">PDF</span>
             </button>
         </div>
     </header>
@@ -196,84 +263,84 @@
     <div class="flex flex-1 overflow-hidden relative w-full max-w-full">
 
         <!-- Left Controls Sidebar -->
-        <aside id="sidebarPanel" class="w-full md:w-[430px] max-w-full bg-[#0f0f12] flex flex-col border-r border-zinc-800/80 z-20 shrink-0 select-text overflow-hidden">
+        <aside id="sidebarPanel" class="w-full md:w-[440px] max-w-full bg-[#0c0c11] flex flex-col border-r border-white/[0.08] z-20 shrink-0 select-text overflow-hidden">
             
-            <!-- Tabs Header -->
-            <div class="flex overflow-x-auto no-scrollbar border-b border-zinc-800/80 bg-[#0a0a0d] text-xs font-medium shrink-0 w-full max-w-full">
-                <button id="tabBtnText" class="flex-1 min-w-[65px] sm:min-w-0 py-2.5 sm:py-3 px-2 flex items-center justify-center gap-1 sm:gap-1.5 border-b-2 border-amber-500 text-zinc-100 bg-[#131317] transition-all cursor-pointer shrink-0 sm:shrink">
+            <!-- Segmented Modern Tabs Header -->
+            <div class="flex overflow-x-auto no-scrollbar border-b border-white/[0.08] bg-[#09090d] text-xs font-medium shrink-0 w-full max-w-full p-1.5 gap-1">
+                <button id="tabBtnText" class="flex-1 min-w-[65px] sm:min-w-0 py-2 sm:py-2.5 px-2 flex items-center justify-center gap-1 sm:gap-1.5 rounded-xl border border-amber-500/40 text-amber-300 bg-amber-500/10 shadow-sm transition-all cursor-pointer shrink-0 sm:shrink font-semibold">
                     <i data-lucide="edit-3" class="w-3.5 h-3.5 text-amber-400"></i>
                     <span>Текст</span>
                 </button>
-                <button id="tabBtnPaper" class="flex-1 min-w-[70px] sm:min-w-0 py-2.5 sm:py-3 px-2 flex items-center justify-center gap-1 sm:gap-1.5 border-b-2 border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-[#121215] transition-all cursor-pointer shrink-0 sm:shrink">
+                <button id="tabBtnPaper" class="flex-1 min-w-[70px] sm:min-w-0 py-2 sm:py-2.5 px-2 flex items-center justify-center gap-1 sm:gap-1.5 rounded-xl border border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40 transition-all cursor-pointer shrink-0 sm:shrink">
                     <i data-lucide="image" class="w-3.5 h-3.5"></i>
                     <span class="hidden sm:inline">Лист и Фон</span>
                     <span class="sm:hidden">Фон</span>
                 </button>
-                <button id="tabBtnGeometry" class="flex-1 min-w-[75px] sm:min-w-0 py-2.5 sm:py-3 px-2 flex items-center justify-center gap-1 sm:gap-1.5 border-b-2 border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-[#121215] transition-all cursor-pointer shrink-0 sm:shrink">
+                <button id="tabBtnGeometry" class="flex-1 min-w-[75px] sm:min-w-0 py-2 sm:py-2.5 px-2 flex items-center justify-center gap-1 sm:gap-1.5 rounded-xl border border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40 transition-all cursor-pointer shrink-0 sm:shrink">
                     <i data-lucide="sliders" class="w-3.5 h-3.5"></i>
                     <span>Геометрия</span>
                 </button>
-                <button id="tabBtnRealism" class="flex-1 min-w-[75px] sm:min-w-0 py-2.5 sm:py-3 px-2 flex items-center justify-center gap-1 sm:gap-1.5 border-b-2 border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-[#121215] transition-all cursor-pointer shrink-0 sm:shrink">
+                <button id="tabBtnRealism" class="flex-1 min-w-[75px] sm:min-w-0 py-2 sm:py-2.5 px-2 flex items-center justify-center gap-1 sm:gap-1.5 rounded-xl border border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40 transition-all cursor-pointer shrink-0 sm:shrink">
                     <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
                     <span>Реализм</span>
                 </button>
-                <button id="tabBtnPresets" class="flex-1 min-w-[75px] sm:min-w-0 py-2.5 sm:py-3 px-2 flex items-center justify-center gap-1 sm:gap-1.5 border-b-2 border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-[#121215] transition-all cursor-pointer shrink-0 sm:shrink">
+                <button id="tabBtnPresets" class="flex-1 min-w-[75px] sm:min-w-0 py-2 sm:py-2.5 px-2 flex items-center justify-center gap-1 sm:gap-1.5 rounded-xl border border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40 transition-all cursor-pointer shrink-0 sm:shrink">
                     <i data-lucide="bookmark" class="w-3.5 h-3.5"></i>
                     <span>Пресеты</span>
                 </button>
             </div>
 
             <!-- Live Sticky Mini-Preview for Parameters Tabs (Mobile Friendly) -->
-            <div id="stickyParamPreview" class="md:hidden bg-[#0c0c10] border-b border-zinc-800/90 px-3.5 py-2.5 shrink-0 hidden shadow-lg">
+            <div id="stickyParamPreview" class="md:hidden bg-[#0d0d14] border-b border-white/[0.08] px-3.5 py-2.5 shrink-0 hidden shadow-xl">
                 <div class="flex items-center justify-between mb-2">
                     <span class="text-[10px] font-bold tracking-wider text-amber-400 uppercase flex items-center gap-1.5">
                         <i data-lucide="eye" class="w-3.5 h-3.5 text-amber-400"></i> Результат в реальном времени
                     </span>
-                    <div class="flex items-center gap-1 bg-[#141418] p-0.5 rounded-lg border border-zinc-800 text-[10px]">
-                        <button id="btnMiniCrop" class="px-2 py-0.5 rounded-md bg-zinc-800 text-amber-300 font-semibold cursor-pointer transition-all">Строки 🔍</button>
-                        <button id="btnMiniFull" class="px-2 py-0.5 rounded-md text-zinc-400 hover:text-white cursor-pointer transition-all">Весь лист</button>
+                    <div class="flex items-center gap-1 bg-[#14141e] p-0.5 rounded-lg border border-white/[0.08] text-[10px]">
+                        <button id="btnMiniCrop" class="px-2.5 py-1 rounded-md bg-amber-500/20 text-amber-300 font-semibold cursor-pointer transition-all border border-amber-500/30">Строки 🔍</button>
+                        <button id="btnMiniFull" class="px-2.5 py-1 rounded-md text-zinc-400 hover:text-white cursor-pointer transition-all">Весь лист</button>
                         <button id="btnMiniToggle" class="p-1 rounded-md text-zinc-400 hover:text-white cursor-pointer transition-all ml-0.5" title="Свернуть / Развернуть">
                             <i id="miniToggleIcon" data-lucide="chevron-up" class="w-3 h-3"></i>
                         </button>
                     </div>
                 </div>
-                <div id="miniCanvasWrapper" class="h-36 sm:h-44 w-full bg-[#121216] rounded-xl border border-zinc-800/90 overflow-hidden relative shadow-inner flex items-center justify-center transition-all">
+                <div id="miniCanvasWrapper" class="h-36 sm:h-44 w-full bg-[#111117] rounded-xl border border-white/[0.08] overflow-hidden relative shadow-inner flex items-center justify-center transition-all">
                     <canvas id="liveParamCanvas" class="max-h-full max-w-full rounded-lg object-contain shadow-sm"></canvas>
                 </div>
             </div>
 
             <!-- Tab Contents Scrollable Body -->
-            <div class="flex-1 overflow-y-auto p-4 space-y-3.5">
+            <div class="flex-1 overflow-y-auto p-3.5 sm:p-4 space-y-3.5">
 
                 <!-- 1. TAB: TEXT -->
                 <div id="tabText" class="space-y-3.5">
-                    <div class="bg-[#141418] p-4 rounded-2xl border border-zinc-800/80 shadow-sm">
+                    <div class="glass-card p-4 rounded-2xl shadow-sm">
                         <div class="flex items-center justify-between mb-3">
                             <label class="text-[11px] font-semibold text-zinc-300 uppercase tracking-widest flex items-center gap-2">
                                 <i data-lucide="file-edit" class="w-3.5 h-3.5 text-amber-400"></i> Текст конспекта
                             </label>
                             <div class="flex items-center gap-1.5">
-                                <button id="btnSampleText" class="text-[11px] px-2.5 py-1 bg-[#1a1a20] hover:bg-zinc-800 text-zinc-300 hover:text-white rounded-lg border border-zinc-700/50 transition-colors cursor-pointer flex items-center gap-1">
+                                <button id="btnSampleText" class="text-[11px] px-2.5 py-1 bg-[#1a1a24] hover:bg-zinc-800 text-zinc-300 hover:text-white rounded-lg border border-white/[0.08] transition-colors cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95">
                                     <i data-lucide="sparkle" class="w-3 h-3 text-amber-400"></i> Пример
                                 </button>
-                                <button id="btnClearText" class="text-[11px] px-2 py-1 bg-[#1a1a20] hover:bg-red-950/30 text-zinc-400 hover:text-red-400 rounded-lg border border-zinc-700/50 transition-colors cursor-pointer" title="Очистить текст">
-                                    <i data-lucide="trash-2" class="w-3 h-3"></i>
+                                <button id="btnClearText" class="text-[11px] px-2 py-1 bg-[#1a1a24] hover:bg-red-950/40 text-zinc-400 hover:text-red-400 rounded-lg border border-white/[0.08] transition-colors cursor-pointer active:scale-95" title="Очистить текст">
+                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                                 </button>
                             </div>
                         </div>
 
-                        <textarea id="textInput" rows="12" class="w-full p-3.5 bg-[#0a0a0d] border border-zinc-800 rounded-xl resize-none text-zinc-100 focus:outline-none focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/20 font-mono text-[13px] shadow-inner transition-all placeholder-zinc-600 leading-relaxed" placeholder="Вставьте сюда любой текст лекции или конспекта..."></textarea>
+                        <textarea id="textInput" rows="12" class="w-full p-3.5 bg-[#09090e] border border-white/[0.08] rounded-xl resize-none text-zinc-100 focus:outline-none focus:border-amber-500/70 focus:ring-1 focus:ring-amber-500/20 font-mono text-[13px] shadow-inner transition-all placeholder-zinc-600 leading-relaxed" placeholder="Вставьте сюда любой текст лекции или конспекта..."></textarea>
 
                         <div class="mt-2.5 flex items-center justify-between text-[11px] text-zinc-500">
                             <span>Пустая строка создает естественный отступ абзаца</span>
-                            <span id="charCounter" class="font-mono text-zinc-400">0 знаков</span>
+                            <span id="charCounter" class="font-mono text-zinc-400 font-semibold bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800">0 знаков</span>
                         </div>
                     </div>
 
                     <!-- Editorial Tip Card -->
-                    <div class="p-3.5 rounded-xl bg-[#141418] border border-zinc-800 text-xs text-zinc-400 flex items-start gap-2.5">
+                    <div class="p-3.5 rounded-xl bg-amber-500/[0.06] border border-amber-500/20 text-xs text-zinc-300 flex items-start gap-2.5">
                         <i data-lucide="info" class="w-4 h-4 text-amber-400 shrink-0 mt-0.5"></i>
-                        <span>Текст форматируется автоматически с учетом полей тетради. Листы генерируются в реальном времени.</span>
+                        <span>Текст разбивается на страницы автоматически с расчетом полей тетради. Листы обновляются в реальном времени.</span>
                     </div>
 
                     <!-- Live Handwritten Preview under text on mobile / main screen -->
@@ -283,10 +350,10 @@
                                 <i data-lucide="book-open" class="w-3.5 h-3.5 text-amber-400"></i> Рукописный результат
                             </label>
                             <div class="flex items-center gap-2">
-                                <span id="inlinePagesCount" class="text-[10px] font-mono text-zinc-400 bg-zinc-800/90 px-2.5 py-0.5 rounded-full border border-zinc-700/60">
+                                <span id="inlinePagesCount" class="text-[10px] font-mono text-zinc-400 bg-zinc-900 px-2.5 py-0.5 rounded-full border border-white/[0.08]">
                                     1 лист
                                 </span>
-                                <button id="btnInlineDownloadAllPng" class="text-[11px] px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 rounded-lg border border-amber-500/30 transition-colors cursor-pointer flex items-center gap-1 active:scale-95 shadow-sm" title="Скачать все листы в PNG одним нажатием">
+                                <button id="btnInlineDownloadAllPng" class="text-[11px] px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 rounded-lg border border-amber-500/30 transition-colors cursor-pointer flex items-center gap-1.5 active:scale-95 shadow-sm" title="Скачать все листы в PNG одним нажатием">
                                     <i data-lucide="images" class="w-3 h-3 text-amber-400"></i>
                                     <span>Все в PNG</span>
                                 </button>
@@ -303,7 +370,7 @@
                 <!-- 2. TAB: PAPER AND BACKGROUNDS -->
                 <div id="tabPaper" class="space-y-3.5 hidden">
                     <!-- Custom Sheet Upload Box -->
-                    <div class="bg-[#141418] p-4 rounded-2xl border border-zinc-800/80 shadow-sm">
+                    <div class="glass-card p-4 rounded-2xl shadow-sm">
                         <label class="text-[11px] font-semibold text-zinc-300 uppercase tracking-widest flex items-center gap-2 mb-1.5">
                             <i data-lucide="upload-cloud" class="w-3.5 h-3.5 text-amber-400"></i> Загрузить своё фото листа
                         </label>
@@ -312,9 +379,9 @@
                         </p>
 
                         <!-- Minimalist Precision Drag and Drop Zone -->
-                        <div id="dropzone" class="border border-dashed border-zinc-700/70 hover:border-amber-500/80 bg-[#0a0a0d] hover:bg-[#121216] p-5 rounded-xl flex flex-col items-center justify-center text-center cursor-pointer transition-all group">
+                        <div id="dropzone" class="border border-dashed border-zinc-700 hover:border-amber-500/80 bg-[#09090e] hover:bg-[#111118] p-5 rounded-xl flex flex-col items-center justify-center text-center cursor-pointer transition-all group">
                             <input type="file" id="sheetFileInput" accept="image/png,image/jpeg,image/jpg,image/webp" class="hidden">
-                            <div class="w-9 h-9 rounded-full bg-zinc-800/80 text-amber-300/90 group-hover:scale-110 flex items-center justify-center mb-2 transition-transform border border-zinc-700/50">
+                            <div class="w-10 h-10 rounded-2xl bg-zinc-800/80 text-amber-400 group-hover:scale-110 flex items-center justify-center mb-2.5 transition-transform border border-white/[0.08] shadow-sm">
                                 <i data-lucide="image-plus" class="w-4 h-4"></i>
                             </div>
                             <span class="text-xs font-semibold text-zinc-200">Перетащите фото листа сюда или нажмите для обзора</span>
@@ -323,12 +390,12 @@
                     </div>
 
                     <!-- Available Templates Gallery -->
-                    <div class="bg-[#141418] p-4 rounded-2xl border border-zinc-800/80 shadow-sm">
+                    <div class="glass-card p-4 rounded-2xl shadow-sm">
                         <div class="flex items-center justify-between mb-3">
                             <label class="text-[11px] font-semibold text-zinc-300 uppercase tracking-widest flex items-center gap-2">
                                 <i data-lucide="layout-grid" class="w-3.5 h-3.5 text-amber-400"></i> Коллекция фонов
                             </label>
-                            <span id="templatesCount" class="text-[10px] font-mono text-zinc-400 bg-zinc-800/80 px-2 py-0.5 rounded-full border border-zinc-700/60">3 фона</span>
+                            <span id="templatesCount" class="text-[10px] font-mono text-zinc-400 bg-zinc-900 px-2 py-0.5 rounded-full border border-white/[0.08]">3 фона</span>
                         </div>
 
                         <!-- Template Cards Grid -->
@@ -338,7 +405,7 @@
                     </div>
 
                     <!-- Mirroring / Page Layout Options -->
-                    <div class="bg-[#141418] p-4 rounded-2xl border border-zinc-800/80 shadow-sm space-y-3">
+                    <div class="glass-card p-4 rounded-2xl shadow-sm space-y-3">
                         <label class="text-[11px] font-semibold text-zinc-300 uppercase tracking-widest flex items-center gap-2">
                             <i data-lucide="flip-horizontal" class="w-3.5 h-3.5 text-amber-400"></i> Оформление чётных страниц
                         </label>
@@ -347,14 +414,14 @@
                         </p>
 
                         <div class="space-y-2">
-                            <label class="flex items-center gap-2.5 text-xs text-zinc-300 cursor-pointer p-2.5 rounded-xl bg-[#0a0a0d] border border-zinc-800 hover:border-zinc-700">
+                            <label class="flex items-center gap-2.5 text-xs text-zinc-300 cursor-pointer p-2.5 rounded-xl bg-[#09090e] border border-white/[0.08] hover:border-zinc-700 transition-colors">
                                 <input type="radio" name="mirrorMode" value="mirror" checked class="accent-amber-500">
                                 <div>
                                     <div class="font-medium text-zinc-200">Зеркалить фон (рекомендуется)</div>
                                     <div class="text-[10px] text-zinc-500">Автоматически отзеркаливает лист для правой страницы</div>
                                 </div>
                             </label>
-                            <label class="flex items-center gap-2.5 text-xs text-zinc-300 cursor-pointer p-2.5 rounded-xl bg-[#0a0a0d] border border-zinc-800 hover:border-zinc-700">
+                            <label class="flex items-center gap-2.5 text-xs text-zinc-300 cursor-pointer p-2.5 rounded-xl bg-[#09090e] border border-white/[0.08] hover:border-zinc-700 transition-colors">
                                 <input type="radio" name="mirrorMode" value="none" class="accent-amber-500">
                                 <div>
                                     <div class="font-medium text-zinc-200">Без отзеркаливания</div>
@@ -365,22 +432,22 @@
                     </div>
 
                     <!-- Background Brightness and Contrast -->
-                    <div class="bg-[#141418] p-4 rounded-2xl border border-zinc-800/80 shadow-sm space-y-4">
+                    <div class="glass-card p-4 rounded-2xl shadow-sm space-y-4">
                         <label class="text-[11px] font-semibold text-zinc-300 uppercase tracking-widest flex items-center gap-2">
                             <i data-lucide="sun-medium" class="w-3.5 h-3.5 text-amber-400"></i> Освещение и контраст фото
                         </label>
-                        <div class="space-y-3">
+                        <div class="space-y-3.5">
                             <div>
-                                <div class="flex justify-between text-xs text-zinc-300 mb-1">
+                                <div class="flex justify-between text-xs text-zinc-300 mb-1.5">
                                     <span>Яркость фона</span>
-                                    <span id="val_bg_brightness" class="font-mono text-zinc-300 font-bold">100%</span>
+                                    <span id="val_bg_brightness" class="font-mono text-zinc-300 font-bold bg-zinc-900 px-1.5 py-0.5 rounded border border-white/[0.06]">100%</span>
                                 </div>
                                 <input type="range" id="bg_brightness" min="50" max="150" value="100" class="w-full">
                             </div>
                             <div>
-                                <div class="flex justify-between text-xs text-zinc-300 mb-1">
+                                <div class="flex justify-between text-xs text-zinc-300 mb-1.5">
                                     <span>Контрастность фона</span>
-                                    <span id="val_bg_contrast" class="font-mono text-zinc-300 font-bold">100%</span>
+                                    <span id="val_bg_contrast" class="font-mono text-zinc-300 font-bold bg-zinc-900 px-1.5 py-0.5 rounded border border-white/[0.06]">100%</span>
                                 </div>
                                 <input type="range" id="bg_contrast" min="50" max="150" value="100" class="w-full">
                             </div>
@@ -391,7 +458,7 @@
                 <!-- 3. TAB: GEOMETRY AND MARGINS -->
                 <div id="tabGeometry" class="space-y-3.5 hidden">
                     <!-- Typography controls -->
-                    <div class="bg-[#141418] p-4 rounded-2xl border border-zinc-800/80 shadow-sm space-y-4">
+                    <div class="glass-card p-4 rounded-2xl shadow-sm space-y-4">
                         <div class="text-[11px] font-semibold text-zinc-300 uppercase tracking-widest flex items-center gap-2">
                             <i data-lucide="type" class="w-3.5 h-3.5 text-amber-400"></i> Параметры шрифта
                         </div>
@@ -400,7 +467,7 @@
                         <div>
                             <div class="flex justify-between items-center text-xs text-zinc-300 mb-1.5">
                                 <span class="flex items-center gap-1.5"><i data-lucide="scaling" class="w-3.5 h-3.5 text-zinc-500"></i> Размер букв</span>
-                                <input type="number" id="num_font_size" min="10" max="80" value="34" class="w-14 bg-[#0a0a0d] border border-zinc-800 rounded-lg px-2 py-0.5 text-xs text-zinc-200 font-mono text-center font-bold">
+                                <input type="number" id="num_font_size" min="10" max="80" value="34" class="w-14 bg-[#09090e] border border-white/[0.08] rounded-lg px-2 py-0.5 text-xs text-zinc-200 font-mono text-center font-bold focus:border-amber-500 focus:outline-none">
                             </div>
                             <input type="range" id="font_size" min="10" max="80" value="34" class="w-full">
                         </div>
@@ -409,7 +476,7 @@
                         <div>
                             <div class="flex justify-between items-center text-xs text-zinc-300 mb-1.5">
                                 <span class="flex items-center gap-1.5"><i data-lucide="rows" class="w-3.5 h-3.5 text-zinc-500"></i> Межстрочный интервал</span>
-                                <input type="number" id="num_line_spacing" min="10" max="120" value="42" class="w-14 bg-[#0a0a0d] border border-zinc-800 rounded-lg px-2 py-0.5 text-xs text-zinc-200 font-mono text-center font-bold">
+                                <input type="number" id="num_line_spacing" min="10" max="120" value="42" class="w-14 bg-[#09090e] border border-white/[0.08] rounded-lg px-2 py-0.5 text-xs text-zinc-200 font-mono text-center font-bold focus:border-amber-500 focus:outline-none">
                             </div>
                             <input type="range" id="line_spacing" min="10" max="120" value="42" class="w-full">
                         </div>
@@ -418,7 +485,7 @@
                         <div>
                             <div class="flex justify-between items-center text-xs text-zinc-300 mb-1.5">
                                 <span class="flex items-center gap-1.5"><i data-lucide="space" class="w-3.5 h-3.5 text-zinc-500"></i> Пробел между словами</span>
-                                <input type="number" id="num_word_spacing" min="0" max="60" value="10" class="w-14 bg-[#0a0a0d] border border-zinc-800 rounded-lg px-2 py-0.5 text-xs text-zinc-200 font-mono text-center font-bold">
+                                <input type="number" id="num_word_spacing" min="0" max="60" value="10" class="w-14 bg-[#09090e] border border-white/[0.08] rounded-lg px-2 py-0.5 text-xs text-zinc-200 font-mono text-center font-bold focus:border-amber-500 focus:outline-none">
                             </div>
                             <input type="range" id="word_spacing" min="0" max="60" value="10" class="w-full">
                         </div>
@@ -427,7 +494,7 @@
                         <div>
                             <div class="flex justify-between items-center text-xs text-zinc-300 mb-1.5">
                                 <span class="flex items-center gap-1.5"><i data-lucide="indent" class="w-3.5 h-3.5 text-zinc-500"></i> Красная строка (абзац)</span>
-                                <input type="number" id="num_paragraph_indent" min="0" max="150" value="35" class="w-14 bg-[#0a0a0d] border border-zinc-800 rounded-lg px-2 py-0.5 text-xs text-zinc-200 font-mono text-center font-bold">
+                                <input type="number" id="num_paragraph_indent" min="0" max="150" value="35" class="w-14 bg-[#09090e] border border-white/[0.08] rounded-lg px-2 py-0.5 text-xs text-zinc-200 font-mono text-center font-bold focus:border-amber-500 focus:outline-none">
                             </div>
                             <input type="range" id="paragraph_indent" min="0" max="150" value="35" class="w-full">
                         </div>
@@ -436,25 +503,25 @@
                         <div>
                             <div class="flex justify-between items-center text-xs text-zinc-300 mb-1.5">
                                 <span class="flex items-center gap-1.5"><i data-lucide="arrow-up-to-line" class="w-3.5 h-3.5 text-zinc-500"></i> Верхний отступ (Начало Y)</span>
-                                <input type="number" id="num_start_y" min="0" max="400" value="60" class="w-14 bg-[#0a0a0d] border border-zinc-800 rounded-lg px-2 py-0.5 text-xs text-zinc-200 font-mono text-center font-bold">
+                                <input type="number" id="num_start_y" min="0" max="400" value="60" class="w-14 bg-[#09090e] border border-white/[0.08] rounded-lg px-2 py-0.5 text-xs text-zinc-200 font-mono text-center font-bold focus:border-amber-500 focus:outline-none">
                             </div>
                             <input type="range" id="start_y" min="0" max="400" value="60" class="w-full">
                         </div>
                     </div>
 
                     <!-- Odd pages margins -->
-                    <div class="bg-[#141418] p-4 rounded-2xl border border-zinc-800/80 shadow-sm space-y-4">
+                    <div class="glass-card p-4 rounded-2xl shadow-sm space-y-4">
                         <div class="flex items-center justify-between">
                             <span class="text-[11px] font-semibold text-zinc-300 uppercase tracking-widest flex items-center gap-2">
                                 <span class="w-2 h-2 rounded-full bg-amber-400"></span> Нечетные листы (1, 3, 5...)
                             </span>
-                            <span class="text-[10px] text-zinc-400 bg-zinc-800/80 px-2 py-0.5 rounded border border-zinc-700/60 font-mono">Левая страница</span>
+                            <span class="text-[10px] text-zinc-400 bg-zinc-900 px-2 py-0.5 rounded border border-white/[0.06] font-mono">Левая страница</span>
                         </div>
 
                         <div>
                             <div class="flex justify-between items-center text-xs text-zinc-300 mb-1.5">
                                 <span class="flex items-center gap-1.5"><i data-lucide="arrow-left-to-line" class="w-3.5 h-3.5 text-zinc-500"></i> Отступ слева (X)</span>
-                                <input type="number" id="num_margin_left" min="10" max="350" value="75" class="w-14 bg-[#0a0a0d] border border-zinc-800 rounded-lg px-2 py-0.5 text-xs text-zinc-200 font-mono text-center font-bold">
+                                <input type="number" id="num_margin_left" min="10" max="350" value="75" class="w-14 bg-[#09090e] border border-white/[0.08] rounded-lg px-2 py-0.5 text-xs text-zinc-200 font-mono text-center font-bold focus:border-amber-500 focus:outline-none">
                             </div>
                             <input type="range" id="margin_left" min="10" max="350" value="75" class="w-full">
                         </div>
@@ -462,25 +529,25 @@
                         <div>
                             <div class="flex justify-between items-center text-xs text-zinc-300 mb-1.5">
                                 <span class="flex items-center gap-1.5"><i data-lucide="arrow-right-to-line" class="w-3.5 h-3.5 text-zinc-500"></i> Правая граница (макс X)</span>
-                                <input type="number" id="num_text_width_limit" min="300" max="1000" value="590" class="w-14 bg-[#0a0a0d] border border-zinc-800 rounded-lg px-2 py-0.5 text-xs text-zinc-200 font-mono text-center font-bold">
+                                <input type="number" id="num_text_width_limit" min="300" max="1000" value="590" class="w-14 bg-[#09090e] border border-white/[0.08] rounded-lg px-2 py-0.5 text-xs text-zinc-200 font-mono text-center font-bold focus:border-amber-500 focus:outline-none">
                             </div>
                             <input type="range" id="text_width_limit" min="300" max="1000" value="590" class="w-full">
                         </div>
                     </div>
 
                     <!-- Even pages margins -->
-                    <div class="bg-[#141418] p-4 rounded-2xl border border-zinc-800/80 shadow-sm space-y-4">
+                    <div class="glass-card p-4 rounded-2xl shadow-sm space-y-4">
                         <div class="flex items-center justify-between">
                             <span class="text-[11px] font-semibold text-zinc-300 uppercase tracking-widest flex items-center gap-2">
                                 <span class="w-2 h-2 rounded-full bg-zinc-400"></span> Четные листы (2, 4, 6...)
                             </span>
-                            <span class="text-[10px] text-zinc-400 bg-zinc-800/80 px-2 py-0.5 rounded border border-zinc-700/60 font-mono">Правая страница</span>
+                            <span class="text-[10px] text-zinc-400 bg-zinc-900 px-2 py-0.5 rounded border border-white/[0.06] font-mono">Правая страница</span>
                         </div>
 
                         <div>
                             <div class="flex justify-between items-center text-xs text-zinc-300 mb-1.5">
                                 <span class="flex items-center gap-1.5"><i data-lucide="arrow-left-to-line" class="w-3.5 h-3.5 text-zinc-500"></i> Отступ слева (за красную линию)</span>
-                                <input type="number" id="num_margin_right_page" min="50" max="450" value="169" class="w-14 bg-[#0a0a0d] border border-zinc-800 rounded-lg px-2 py-0.5 text-xs text-zinc-200 font-mono text-center font-bold">
+                                <input type="number" id="num_margin_right_page" min="50" max="450" value="169" class="w-14 bg-[#09090e] border border-white/[0.08] rounded-lg px-2 py-0.5 text-xs text-zinc-200 font-mono text-center font-bold focus:border-amber-500 focus:outline-none">
                             </div>
                             <input type="range" id="margin_right_page" min="50" max="450" value="169" class="w-full">
                         </div>
@@ -488,7 +555,7 @@
                         <div>
                             <div class="flex justify-between items-center text-xs text-zinc-300 mb-1.5">
                                 <span class="flex items-center gap-1.5"><i data-lucide="arrow-right-to-line" class="w-3.5 h-3.5 text-zinc-500"></i> Правая граница (макс X)</span>
-                                <input type="number" id="num_text_width_limit_even" min="300" max="1000" value="730" class="w-14 bg-[#0a0a0d] border border-zinc-800 rounded-lg px-2 py-0.5 text-xs text-zinc-200 font-mono text-center font-bold">
+                                <input type="number" id="num_text_width_limit_even" min="300" max="1000" value="730" class="w-14 bg-[#09090e] border border-white/[0.08] rounded-lg px-2 py-0.5 text-xs text-zinc-200 font-mono text-center font-bold focus:border-amber-500 focus:outline-none">
                             </div>
                             <input type="range" id="text_width_limit_even" min="300" max="1000" value="730" class="w-full">
                         </div>
@@ -498,60 +565,60 @@
                 <!-- 4. TAB: REALISM AND INK -->
                 <div id="tabRealism" class="space-y-3.5 hidden">
                     <!-- Curated Luxury Stationery Ink Section -->
-                    <div class="bg-[#141418] p-4 rounded-2xl border border-zinc-800/80 shadow-sm space-y-3">
+                    <div class="glass-card p-4 rounded-2xl shadow-sm space-y-3.5">
                         <label class="text-[11px] font-semibold text-zinc-300 uppercase tracking-widest flex items-center gap-2">
                             <i data-lucide="droplet" class="w-3.5 h-3.5 text-amber-400"></i> Палитра архивных чернил
                         </label>
                         
                         <!-- Studio Color Swatches -->
                         <div class="grid grid-cols-3 gap-2">
-                            <button class="ink-btn flex items-center gap-2 p-2 rounded-xl bg-[#0a0a0d] border border-amber-500/80 text-xs text-zinc-200 transition-all cursor-pointer ring-1 ring-amber-500/30" data-color="#1c2e74">
-                                <span class="w-3.5 h-3.5 rounded-full bg-[#1c2e74] border border-white/20 shrink-0"></span>
+                            <button class="ink-btn flex items-center gap-2 p-2 rounded-xl bg-[#09090e] border border-amber-500/80 text-xs text-zinc-200 transition-all cursor-pointer ring-1 ring-amber-500/30" data-color="#1c2e74">
+                                <span class="w-3.5 h-3.5 rounded-full bg-[#1c2e74] border border-white/20 shrink-0 shadow-sm"></span>
                                 <span class="truncate">Синяя шарик.</span>
                             </button>
-                            <button class="ink-btn flex items-center gap-2 p-2 rounded-xl bg-[#0a0a0d] border border-zinc-800 hover:border-zinc-700 text-xs text-zinc-300 transition-all cursor-pointer" data-color="#2a2868">
-                                <span class="w-3.5 h-3.5 rounded-full bg-[#2a2868] border border-white/20 shrink-0"></span>
+                            <button class="ink-btn flex items-center gap-2 p-2 rounded-xl bg-[#09090e] border border-white/[0.08] hover:border-zinc-700 text-xs text-zinc-300 transition-all cursor-pointer" data-color="#2a2868">
+                                <span class="w-3.5 h-3.5 rounded-full bg-[#2a2868] border border-white/20 shrink-0 shadow-sm"></span>
                                 <span class="truncate">Фиолетовая</span>
                             </button>
-                            <button class="ink-btn flex items-center gap-2 p-2 rounded-xl bg-[#0a0a0d] border border-zinc-800 hover:border-zinc-700 text-xs text-zinc-300 transition-all cursor-pointer" data-color="#111827">
-                                <span class="w-3.5 h-3.5 rounded-full bg-[#111827] border border-white/20 shrink-0"></span>
+                            <button class="ink-btn flex items-center gap-2 p-2 rounded-xl bg-[#09090e] border border-white/[0.08] hover:border-zinc-700 text-xs text-zinc-300 transition-all cursor-pointer" data-color="#111827">
+                                <span class="w-3.5 h-3.5 rounded-full bg-[#111827] border border-white/20 shrink-0 shadow-sm"></span>
                                 <span class="truncate">Черная гель</span>
                             </button>
-                            <button class="ink-btn flex items-center gap-2 p-2 rounded-xl bg-[#0a0a0d] border border-zinc-800 hover:border-zinc-700 text-xs text-zinc-300 transition-all cursor-pointer" data-color="#475569">
-                                <span class="w-3.5 h-3.5 rounded-full bg-[#475569] border border-white/20 shrink-0"></span>
+                            <button class="ink-btn flex items-center gap-2 p-2 rounded-xl bg-[#09090e] border border-white/[0.08] hover:border-zinc-700 text-xs text-zinc-300 transition-all cursor-pointer" data-color="#475569">
+                                <span class="w-3.5 h-3.5 rounded-full bg-[#475569] border border-white/20 shrink-0 shadow-sm"></span>
                                 <span class="truncate">Карандаш 2B</span>
                             </button>
-                            <button class="ink-btn flex items-center gap-2 p-2 rounded-xl bg-[#0a0a0d] border border-zinc-800 hover:border-zinc-700 text-xs text-zinc-300 transition-all cursor-pointer" data-color="#881337">
-                                <span class="w-3.5 h-3.5 rounded-full bg-[#881337] border border-white/20 shrink-0"></span>
+                            <button class="ink-btn flex items-center gap-2 p-2 rounded-xl bg-[#09090e] border border-white/[0.08] hover:border-zinc-700 text-xs text-zinc-300 transition-all cursor-pointer" data-color="#881337">
+                                <span class="w-3.5 h-3.5 rounded-full bg-[#881337] border border-white/20 shrink-0 shadow-sm"></span>
                                 <span class="truncate">Бордовая</span>
                             </button>
-                            <button class="ink-btn flex items-center gap-2 p-2 rounded-xl bg-[#0a0a0d] border border-zinc-800 hover:border-zinc-700 text-xs text-zinc-300 transition-all cursor-pointer" data-color="#14532d">
-                                <span class="w-3.5 h-3.5 rounded-full bg-[#14532d] border border-white/20 shrink-0"></span>
+                            <button class="ink-btn flex items-center gap-2 p-2 rounded-xl bg-[#09090e] border border-white/[0.08] hover:border-zinc-700 text-xs text-zinc-300 transition-all cursor-pointer" data-color="#14532d">
+                                <span class="w-3.5 h-3.5 rounded-full bg-[#14532d] border border-white/20 shrink-0 shadow-sm"></span>
                                 <span class="truncate">Хвойная</span>
                             </button>
                         </div>
 
                         <!-- Custom Hex Picker -->
                         <div class="flex items-center gap-2.5 pt-1.5">
-                            <input type="color" id="inkColorPicker" value="#1c2e74" class="w-7 h-7 rounded-lg bg-transparent border-0 cursor-pointer">
+                            <input type="color" id="inkColorPicker" value="#1c2e74" class="w-8 h-8 rounded-lg bg-transparent border-0 cursor-pointer">
                             <span class="text-xs text-zinc-400">Произвольный оттенок чернил</span>
-                            <span id="inkHexDisplay" class="ml-auto text-xs font-mono text-zinc-300">#1c2e74</span>
+                            <span id="inkHexDisplay" class="ml-auto text-xs font-mono text-zinc-300 font-bold bg-zinc-900 px-2 py-0.5 rounded border border-white/[0.08]">#1c2e74</span>
                         </div>
                     </div>
 
                     <!-- Handwriting Micro-Fluctuations -->
-                    <div class="bg-[#141418] p-4 rounded-2xl border border-zinc-800/80 shadow-sm space-y-4">
+                    <div class="glass-card p-4 rounded-2xl shadow-sm space-y-4">
                         <label class="text-[11px] font-semibold text-zinc-300 uppercase tracking-widest flex items-center gap-2">
                             <i data-lucide="activity" class="w-3.5 h-3.5 text-amber-400"></i> «Живая рука» и микроколебания
                         </label>
 
-                        <!-- Baseline Jitter (Дрожание строки) -->
+                        <!-- Baseline Jitter -->
                         <div>
                             <div class="flex justify-between items-center text-xs text-zinc-300 mb-1.5">
                                 <span class="flex items-center gap-1.5" title="Буквы слегка пляшут по высоте, как при реальном письме">
                                     <i data-lucide="waves" class="w-3.5 h-3.5 text-zinc-500"></i> Дрожание строки (Baseline)
                                 </span>
-                                <input type="number" id="num_baseline_jitter" min="0" max="6" step="0.5" value="1.5" class="w-14 bg-[#0a0a0d] border border-zinc-800 rounded-lg px-2 py-0.5 text-xs text-zinc-200 font-mono text-center font-bold">
+                                <input type="number" id="num_baseline_jitter" min="0" max="6" step="0.5" value="1.5" class="w-14 bg-[#09090e] border border-white/[0.08] rounded-lg px-2 py-0.5 text-xs text-zinc-200 font-mono text-center font-bold focus:border-amber-500 focus:outline-none">
                             </div>
                             <input type="range" id="baseline_jitter" min="0" max="6" step="0.5" value="1.5" class="w-full">
                         </div>
@@ -562,7 +629,7 @@
                                 <span class="flex items-center gap-1.5" title="Каждая буква слегка меняет угол наклона">
                                     <i data-lucide="italic" class="w-3.5 h-3.5 text-zinc-500"></i> Микронаклон букв (°)
                                 </span>
-                                <input type="number" id="num_slant_jitter" min="0" max="5" step="0.5" value="1" class="w-14 bg-[#0a0a0d] border border-zinc-800 rounded-lg px-2 py-0.5 text-xs text-zinc-200 font-mono text-center font-bold">
+                                <input type="number" id="num_slant_jitter" min="0" max="5" step="0.5" value="1" class="w-14 bg-[#09090e] border border-white/[0.08] rounded-lg px-2 py-0.5 text-xs text-zinc-200 font-mono text-center font-bold focus:border-amber-500 focus:outline-none">
                             </div>
                             <input type="range" id="slant_jitter" min="0" max="5" step="0.5" value="1" class="w-full">
                         </div>
@@ -573,7 +640,7 @@
                                 <span class="flex items-center gap-1.5" title="Случайная разница в величине отдельных букв">
                                     <i data-lucide="shuffle" class="w-3.5 h-3.5 text-zinc-500"></i> Хаос размера букв (px)
                                 </span>
-                                <input type="number" id="num_random_size" min="0" max="8" value="2" class="w-14 bg-[#0a0a0d] border border-zinc-800 rounded-lg px-2 py-0.5 text-xs text-zinc-200 font-mono text-center font-bold">
+                                <input type="number" id="num_random_size" min="0" max="8" value="2" class="w-14 bg-[#09090e] border border-white/[0.08] rounded-lg px-2 py-0.5 text-xs text-zinc-200 font-mono text-center font-bold focus:border-amber-500 focus:outline-none">
                             </div>
                             <input type="range" id="random_size" min="0" max="8" value="2" class="w-full">
                         </div>
@@ -584,7 +651,7 @@
                                 <span class="flex items-center gap-1.5" title="Наклон всей тетради под углом">
                                     <i data-lucide="rotate-cw" class="w-3.5 h-3.5 text-zinc-500"></i> Общий наклон тетради (°)
                                 </span>
-                                <input type="number" id="num_text_rotate" min="-6" max="6" step="0.2" value="0.2" class="w-14 bg-[#0a0a0d] border border-zinc-800 rounded-lg px-2 py-0.5 text-xs text-zinc-200 font-mono text-center font-bold">
+                                <input type="number" id="num_text_rotate" min="-6" max="6" step="0.2" value="0.2" class="w-14 bg-[#09090e] border border-white/[0.08] rounded-lg px-2 py-0.5 text-xs text-zinc-200 font-mono text-center font-bold focus:border-amber-500 focus:outline-none">
                             </div>
                             <input type="range" id="text_rotate" min="-6" max="6" step="0.2" value="0.2" class="w-full">
                         </div>
@@ -595,7 +662,7 @@
                                 <span class="flex items-center gap-1.5" title="Имитация подсыхания пасты и разного нажима руки">
                                     <i data-lucide="feather" class="w-3.5 h-3.5 text-zinc-500"></i> Разброс нажима пера
                                 </span>
-                                <input type="number" id="num_ink_pressure" min="0" max="0.5" step="0.05" value="0.15" class="w-14 bg-[#0a0a0d] border border-zinc-800 rounded-lg px-2 py-0.5 text-xs text-zinc-200 font-mono text-center font-bold">
+                                <input type="number" id="num_ink_pressure" min="0" max="0.5" step="0.05" value="0.15" class="w-14 bg-[#09090e] border border-white/[0.08] rounded-lg px-2 py-0.5 text-xs text-zinc-200 font-mono text-center font-bold focus:border-amber-500 focus:outline-none">
                             </div>
                             <input type="range" id="ink_pressure" min="0" max="0.5" step="0.05" value="0.15" class="w-full">
                         </div>
@@ -605,7 +672,7 @@
                 <!-- 5. TAB: PRESETS AND FONTS -->
                 <div id="tabPresets" class="space-y-3.5 hidden">
                     <!-- Presets Selector -->
-                    <div class="bg-[#141418] p-4 rounded-2xl border border-zinc-800/80 shadow-sm space-y-3">
+                    <div class="glass-card p-4 rounded-2xl shadow-sm space-y-3">
                         <label class="text-[11px] font-semibold text-zinc-300 uppercase tracking-widest flex items-center gap-2">
                             <i data-lucide="bookmark-check" class="w-3.5 h-3.5 text-amber-400"></i> Пресеты оформления
                         </label>
@@ -617,22 +684,22 @@
                             <!-- Preset cards dynamically generated -->
                         </div>
 
-                        <div class="pt-2 border-t border-zinc-800 flex gap-2">
-                            <input type="text" id="newPresetName" placeholder="Имя своего стиля..." class="flex-1 bg-[#0a0a0d] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-amber-500/60">
-                            <button id="btnSavePreset" class="px-3.5 py-2 bg-zinc-200 hover:bg-white text-zinc-950 rounded-xl text-xs font-semibold cursor-pointer transition-colors shadow-sm">
+                        <div class="pt-2 border-t border-white/[0.08] flex gap-2">
+                            <input type="text" id="newPresetName" placeholder="Имя своего стиля..." class="flex-1 bg-[#09090e] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-amber-500/70">
+                            <button id="btnSavePreset" class="px-3.5 py-2 bg-white hover:bg-zinc-100 text-zinc-950 rounded-xl text-xs font-bold cursor-pointer transition-colors shadow-sm active:scale-95">
                                 Сохранить
                             </button>
                         </div>
                     </div>
 
                     <!-- Fonts Upload & Selector -->
-                    <div class="bg-[#141418] p-4 rounded-2xl border border-zinc-800/80 shadow-sm space-y-3">
+                    <div class="glass-card p-4 rounded-2xl shadow-sm space-y-3">
                         <label class="text-[11px] font-semibold text-zinc-300 uppercase tracking-widest flex items-center gap-2">
                             <i data-lucide="file-font" class="w-3.5 h-3.5 text-amber-400"></i> Рукописные шрифты
                         </label>
                         
                         <!-- Font Dropzone -->
-                        <div id="fontDropzone" class="border border-dashed border-zinc-800 hover:border-amber-500/80 bg-[#0a0a0d] p-3 rounded-xl flex items-center justify-center gap-2 text-xs text-zinc-400 cursor-pointer transition-colors">
+                        <div id="fontDropzone" class="border border-dashed border-zinc-700 hover:border-amber-500/80 bg-[#09090e] p-3 rounded-xl flex items-center justify-center gap-2 text-xs text-zinc-400 cursor-pointer transition-colors">
                             <input type="file" id="fontFileInput" accept=".ttf,.otf" class="hidden">
                             <i data-lucide="upload" class="w-4 h-4 text-amber-400"></i>
                             <span>Загрузить шрифт (.ttf, .otf)</span>
@@ -648,22 +715,22 @@
             </div>
 
             <!-- Sidebar Footer Quick Info -->
-            <div class="hidden md:flex p-3 bg-[#0a0a0d] border-t border-zinc-800 text-[11px] text-zinc-500 justify-between items-center shrink-0">
+            <div class="hidden md:flex p-3 bg-[#08080c] border-t border-white/[0.08] text-[11px] text-zinc-500 justify-between items-center shrink-0">
                 <span class="font-mono text-[10px] tracking-wider text-zinc-400">HANDWRITER STUDIO</span>
                 <span class="flex items-center gap-1 text-zinc-400">
-                    <kbd class="px-1.5 py-0.5 text-[10px] bg-zinc-800 rounded border border-zinc-700 text-zinc-300 font-mono">Ctrl</kbd>+<kbd class="px-1.5 py-0.5 text-[10px] bg-zinc-800 rounded border border-zinc-700 text-zinc-300 font-mono">Enter</kbd>
+                    <kbd class="px-1.5 py-0.5 text-[10px] bg-zinc-800/90 rounded border border-white/[0.08] text-zinc-300 font-mono">Ctrl</kbd>+<kbd class="px-1.5 py-0.5 text-[10px] bg-zinc-800/90 rounded border border-white/[0.08] text-zinc-300 font-mono">Enter</kbd>
                 </span>
             </div>
         </aside>
 
         <!-- Right Main Drafting / Preview Area -->
-        <main id="previewPanel" class="flex-1 flex flex-col bg-[#070709] overflow-hidden relative hidden md:flex">
+        <main id="previewPanel" class="flex-1 flex flex-col bg-[#07070a] overflow-hidden relative hidden md:flex">
 
             <!-- Studio Viewport Toolbar -->
-            <div class="px-3 sm:px-6 py-2 sm:py-2.5 bg-[#0f0f12]/90 backdrop-blur-md border-b border-zinc-800/80 flex items-center justify-between shrink-0 z-10">
+            <div class="px-3 sm:px-6 py-2 sm:py-2.5 bg-[#0e0e13]/90 backdrop-blur-md border-b border-white/[0.08] flex items-center justify-between shrink-0 z-10">
                 <!-- View Mode Segmented Control -->
-                <div class="flex items-center gap-1 bg-[#141418] p-1 rounded-xl border border-zinc-800">
-                    <button id="viewSpreadBtn" class="px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 text-zinc-100 shadow-sm flex items-center gap-1.5 cursor-pointer transition-colors" title="Режим разворота тетради">
+                <div class="flex items-center gap-1 bg-[#121218] p-1 rounded-xl border border-white/[0.08]">
+                    <button id="viewSpreadBtn" class="px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-800 text-zinc-100 shadow-sm flex items-center gap-1.5 cursor-pointer transition-colors" title="Режим разворота тетради">
                         <i data-lucide="book-open" class="w-3.5 h-3.5 text-amber-400"></i>
                         <span>Разворот</span>
                     </button>
@@ -679,15 +746,15 @@
 
                 <!-- Precision Zoom Controls -->
                 <div class="flex items-center gap-2">
-                    <div class="flex items-center bg-[#141418] rounded-xl border border-zinc-800 p-0.5 text-xs text-zinc-300">
-                        <button id="btnZoomOut" class="p-1.5 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white cursor-pointer" title="Уменьшить">
+                    <div class="flex items-center bg-[#121218] rounded-xl border border-white/[0.08] p-0.5 text-xs text-zinc-300 shadow-inner">
+                        <button id="btnZoomOut" class="p-1.5 hover:bg-zinc-800/80 rounded-lg text-zinc-400 hover:text-white cursor-pointer active:scale-95 transition-all" title="Уменьшить">
                             <i data-lucide="minus" class="w-3.5 h-3.5"></i>
                         </button>
-                        <span id="zoomLevelDisplay" class="px-1.5 sm:px-2 font-mono font-bold text-zinc-200 text-[11px] sm:text-xs">100%</span>
-                        <button id="btnZoomIn" class="p-1.5 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white cursor-pointer" title="Увеличить">
+                        <span id="zoomLevelDisplay" class="px-2 font-mono font-bold text-zinc-200 text-[11px] sm:text-xs min-w-[42px] text-center">100%</span>
+                        <button id="btnZoomIn" class="p-1.5 hover:bg-zinc-800/80 rounded-lg text-zinc-400 hover:text-white cursor-pointer active:scale-95 transition-all" title="Увеличить">
                             <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                         </button>
-                        <button id="btnZoomFit" class="px-2 py-1 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white cursor-pointer text-[11px] ml-0.5" title="По ширине окна">
+                        <button id="btnZoomFit" class="px-2.5 py-1 hover:bg-zinc-800/80 rounded-lg text-zinc-400 hover:text-white cursor-pointer text-[11px] font-semibold ml-0.5 active:scale-95 transition-all" title="По ширине окна">
                             Fit
                         </button>
                     </div>
@@ -695,26 +762,26 @@
             </div>
 
             <!-- Canvas Scroll Container (Architectural Drafting Surface) -->
-            <div id="viewportContainer" class="flex-1 overflow-auto p-4 sm:p-10 flex flex-col items-center bg-[radial-gradient(#1c1c22_1px,transparent_1px)] [background-size:20px_20px]">
+            <div id="viewportContainer" class="flex-1 overflow-auto p-4 sm:p-10 flex flex-col items-center bg-[radial-gradient(#1c1c24_1px,transparent_1px)] [background-size:22px_22px]">
                 <div id="canvasContainer" class="flex flex-col items-center gap-6 sm:gap-12 transition-transform origin-top duration-150">
                     <!-- Canvases are rendered here -->
                 </div>
             </div>
 
             <!-- Studio Toast Notification -->
-            <div id="toast" class="fixed bottom-16 md:bottom-6 right-4 sm:right-6 bg-[#18181c]/95 border border-zinc-700/80 text-zinc-100 px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 transform translate-y-20 opacity-0 transition-all duration-300 z-50 pointer-events-none backdrop-blur-md">
+            <div id="toast" class="fixed bottom-16 md:bottom-6 right-4 sm:right-6 bg-[#16161f]/95 border border-white/[0.12] text-zinc-100 px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 transform translate-y-20 opacity-0 transition-all duration-300 z-50 pointer-events-none backdrop-blur-xl">
                 <div id="toastIcon" class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
                     <i data-lucide="check" class="w-3.5 h-3.5"></i>
                 </div>
-                <div id="toastMessage" class="text-xs font-medium">Успешно!</div>
+                <div id="toastMessage" class="text-xs font-semibold">Успешно!</div>
             </div>
 
         </main>
     </div>
 
     <!-- Mobile Bottom Navigation Bar (Telegram Friendly) -->
-    <nav class="md:hidden bg-[#0f0f12]/95 backdrop-blur-lg border-t border-zinc-800/80 px-4 py-1.5 flex justify-around items-center z-30 shrink-0 select-none">
-        <button id="mobileNavText" class="flex-1 py-1.5 flex flex-col items-center gap-1 text-amber-400 text-[10px] font-semibold transition-all">
+    <nav class="md:hidden bg-[#0c0c11]/95 backdrop-blur-xl border-t border-white/[0.08] px-4 py-1.5 flex justify-around items-center z-30 shrink-0 select-none">
+        <button id="mobileNavText" class="flex-1 py-1.5 flex flex-col items-center gap-1 text-amber-400 text-[10px] font-bold transition-all">
             <i data-lucide="edit-3" class="w-4 h-4"></i>
             <span>Текст</span>
         </button>
@@ -722,7 +789,7 @@
             <i data-lucide="sliders" class="w-4 h-4"></i>
             <span>Параметры</span>
         </button>
-        <button id="mobileNavTariffs" class="flex-1 py-1.5 flex flex-col items-center gap-1 text-amber-300 hover:text-amber-200 text-[10px] font-semibold transition-all">
+        <button id="mobileNavTariffs" class="flex-1 py-1.5 flex flex-col items-center gap-1 text-amber-300 hover:text-amber-200 text-[10px] font-bold transition-all">
             <i data-lucide="sparkles" class="w-4 h-4 text-amber-400"></i>
             <span>PRO ⭐</span>
         </button>
@@ -730,7 +797,7 @@
 
     <!-- Tariffs Modal (Telegram Stars) -->
     <div id="tariffsModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4 hidden">
-        <div class="bg-[#121217] border border-zinc-700/80 rounded-3xl max-w-2xl w-full p-5 sm:p-7 shadow-2xl relative max-h-[92vh] overflow-y-auto">
+        <div class="bg-[#121218] border border-white/[0.1] rounded-3xl max-w-2xl w-full p-5 sm:p-7 shadow-2xl relative max-h-[92vh] overflow-y-auto">
             <!-- Close button -->
             <button id="btnCloseTariffs" class="absolute top-4 right-4 text-zinc-400 hover:text-white p-2 rounded-xl bg-zinc-800/80 hover:bg-zinc-700 cursor-pointer transition-all">
                 <i data-lucide="x" class="w-5 h-5"></i>
@@ -748,9 +815,9 @@
             </div>
 
             <!-- Current user status card -->
-            <div id="userProStatusCard" class="mb-5 p-3.5 rounded-2xl bg-zinc-900/90 border border-zinc-800 flex items-center justify-between text-xs">
+            <div id="userProStatusCard" class="mb-5 p-3.5 rounded-2xl bg-zinc-900/90 border border-white/[0.08] flex items-center justify-between text-xs">
                 <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-xl bg-zinc-800 flex items-center justify-center text-amber-400 border border-zinc-700/50">
+                    <div class="w-9 h-9 rounded-xl bg-zinc-800 flex items-center justify-center text-amber-400 border border-white/[0.08]">
                         <i data-lucide="user" class="w-4 h-4"></i>
                     </div>
                     <div>
@@ -769,8 +836,8 @@
             </div>
 
             <!-- Benefits Footer -->
-            <div class="p-3.5 rounded-2xl bg-[#0a0a0e] border border-zinc-800/80 text-[11px] text-zinc-400 space-y-1">
-                <div class="flex items-center gap-2 text-zinc-300 font-medium">
+            <div class="p-3.5 rounded-2xl bg-[#09090e] border border-white/[0.08] text-[11px] text-zinc-400 space-y-1">
+                <div class="flex items-center gap-2 text-zinc-300 font-semibold">
                     <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i>
                     Безопасная оплата через Telegram
                 </div>
@@ -781,7 +848,7 @@
 
     <!-- Admin Management Modal (Visible only to Creator/Admin) -->
     <div id="adminModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-2 sm:p-4 hidden">
-        <div class="bg-[#121217] border border-purple-500/50 rounded-2xl sm:rounded-3xl max-w-2xl w-full p-3.5 sm:p-6 shadow-[0_0_50px_rgba(168,85,247,0.15)] relative max-h-[92vh] overflow-y-auto">
+        <div class="bg-[#121218] border border-purple-500/50 rounded-2xl sm:rounded-3xl max-w-2xl w-full p-3.5 sm:p-6 shadow-[0_0_50px_rgba(168,85,247,0.18)] relative max-h-[92vh] overflow-y-auto">
             <!-- Close button -->
             <button id="btnCloseAdmin" class="absolute top-3 right-3 sm:top-4 sm:right-4 text-zinc-400 hover:text-white p-1.5 sm:p-2 rounded-xl bg-zinc-800/80 hover:bg-zinc-700 cursor-pointer transition-all">
                 <i data-lucide="x" class="w-5 h-5"></i>
@@ -802,37 +869,37 @@
 
             <!-- Stats Grid -->
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4 text-center">
-                <div class="bg-[#181820] p-2.5 sm:p-3 rounded-2xl border border-zinc-800">
+                <div class="bg-[#181822] p-2.5 sm:p-3 rounded-2xl border border-white/[0.08]">
                     <div class="text-zinc-400 text-[10px] uppercase font-bold tracking-wider mb-1">Всего польз.</div>
                     <div id="adminStatUsers" class="text-base sm:text-xl font-bold font-mono text-white">0</div>
                 </div>
-                <div class="bg-[#181820] p-2.5 sm:p-3 rounded-2xl border border-zinc-800">
+                <div class="bg-[#181822] p-2.5 sm:p-3 rounded-2xl border border-white/[0.08]">
                     <div class="text-amber-400 text-[10px] uppercase font-bold tracking-wider mb-1">PRO подписки</div>
                     <div id="adminStatPro" class="text-base sm:text-xl font-bold font-mono text-amber-300">0</div>
                 </div>
-                <div class="bg-[#181820] p-2.5 sm:p-3 rounded-2xl border border-zinc-800">
+                <div class="bg-[#181822] p-2.5 sm:p-3 rounded-2xl border border-white/[0.08]">
                     <div class="text-yellow-400 text-[10px] uppercase font-bold tracking-wider mb-1">Stars получено</div>
                     <div id="adminStatStars" class="text-base sm:text-xl font-bold font-mono text-yellow-300">0 ⭐</div>
                 </div>
-                <div class="bg-[#181820] p-2.5 sm:p-3 rounded-2xl border border-zinc-800">
+                <div class="bg-[#181822] p-2.5 sm:p-3 rounded-2xl border border-white/[0.08]">
                     <div class="text-emerald-400 text-[10px] uppercase font-bold tracking-wider mb-1">Оплат</div>
                     <div id="adminStatPayments" class="text-base sm:text-xl font-bold font-mono text-emerald-300">0</div>
                 </div>
             </div>
 
             <!-- Give PRO Action Section -->
-            <div class="bg-[#16161d] p-3 sm:p-4 rounded-2xl border border-zinc-800/80 mb-4">
+            <div class="bg-[#151520] p-3 sm:p-4 rounded-2xl border border-white/[0.08] mb-4">
                 <label class="text-xs font-semibold text-zinc-300 flex items-center gap-1.5 mb-2">
                     <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-400"></i> Ручная выдача PRO доступа
                 </label>
                 <div class="flex flex-col sm:flex-row gap-2 mb-2">
-                    <input id="adminTargetTgId" type="text" placeholder="Telegram ID пользователя" class="w-full sm:flex-1 min-w-0 bg-[#0f0f14] border border-zinc-700/80 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500 font-mono" />
-                    <select id="adminDurationSelect" class="w-full sm:w-auto bg-[#0f0f14] border border-zinc-700/80 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500">
+                    <input id="adminTargetTgId" type="text" placeholder="Telegram ID пользователя" class="w-full sm:flex-1 min-w-0 bg-[#09090e] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500 font-mono" />
+                    <select id="adminDurationSelect" class="w-full sm:w-auto bg-[#09090e] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500">
                         <option value="1">1 день</option>
                         <option value="30">30 дней</option>
                         <option value="0" selected>Навсегда (Lifetime)</option>
                     </select>
-                    <button id="btnAdminGivePro" class="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-black font-semibold text-xs rounded-xl cursor-pointer transition-all active:scale-95 shrink-0">
+                    <button id="btnAdminGivePro" class="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-black font-bold text-xs rounded-xl cursor-pointer transition-all active:scale-95 shrink-0 shadow-sm">
                         Выдать PRO
                     </button>
                 </div>
@@ -840,16 +907,16 @@
             </div>
 
             <!-- Users List Section -->
-            <div class="bg-[#16161d] p-3 sm:p-4 rounded-2xl border border-zinc-800/80">
+            <div class="bg-[#151520] p-3 sm:p-4 rounded-2xl border border-white/[0.08]">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
                     <label class="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
                         <i data-lucide="user" class="w-3.5 h-3.5 text-purple-400"></i> Зарегистрированные пользователи
                     </label>
                     <div class="flex items-center gap-1.5 flex-wrap">
-                        <button id="btnAdminExportDb" class="text-[11px] px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-lg flex items-center gap-1 transition-all cursor-pointer border border-zinc-700/60 active:scale-95" title="Скачать бэкап базы пользователей (JSON)">
+                        <button id="btnAdminExportDb" class="text-[11px] px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-lg flex items-center gap-1 transition-all cursor-pointer border border-white/[0.08] active:scale-95" title="Скачать бэкап базы пользователей (JSON)">
                             <i data-lucide="download" class="w-3 h-3 text-purple-400"></i> Бэкап
                         </button>
-                        <label for="adminImportFile" class="text-[11px] px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-lg flex items-center gap-1 transition-all cursor-pointer border border-zinc-700/60 active:scale-95" title="Восстановить базу пользователей из бэкапа (JSON)">
+                        <label for="adminImportFile" class="text-[11px] px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-lg flex items-center gap-1 transition-all cursor-pointer border border-white/[0.08] active:scale-95" title="Восстановить базу пользователей из бэкапа (JSON)">
                             <i data-lucide="upload" class="w-3 h-3 text-emerald-400"></i> Импорт
                         </label>
                         <input id="adminImportFile" type="file" accept=".json" class="hidden" />
@@ -859,7 +926,7 @@
                     </div>
                 </div>
 
-                <!-- Render Cloud Persistence Tip -->
+                <!-- Cloud Persistence Tip -->
                 <div class="p-2.5 mb-3 rounded-xl bg-purple-950/20 border border-purple-500/30 text-[11px] text-purple-300 flex items-start gap-2">
                     <i data-lucide="database" class="w-3.5 h-3.5 text-purple-400 shrink-0 mt-0.5"></i>
                     <span><strong>Сохранение пользователей на Render:</strong> бесплатный контейнер Render при коммитах обновляет диск. Чтобы база никогда не стиралась, подключите бесплатный <strong>PostgreSQL</strong> в Render (вкладка Environment ➔ <code class="bg-black/40 px-1 py-0.5 rounded text-amber-300">DATABASE_URL</code>). Или скачивайте бэкап кнопкой выше.</span>
@@ -874,7 +941,7 @@
 
     <!-- Image Preview Modal (For direct view & saving to Photos on mobile) -->
     <div id="imagePreviewModal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
-        <div class="relative max-w-xl w-full flex flex-col items-center gap-3 bg-[#121217] border border-zinc-800 rounded-3xl p-4 sm:p-5 shadow-2xl">
+        <div class="relative max-w-xl w-full flex flex-col items-center gap-3 bg-[#121218] border border-white/[0.1] rounded-3xl p-4 sm:p-5 shadow-2xl">
             <!-- Close button -->
             <button id="btnCloseImagePreview" class="absolute top-3 right-3 text-zinc-400 hover:text-white p-2 rounded-xl bg-zinc-800/80 hover:bg-zinc-700 cursor-pointer transition-all z-10">
                 <i data-lucide="x" class="w-5 h-5"></i>
@@ -892,16 +959,16 @@
             </div>
 
             <!-- Image View -->
-            <div class="w-full max-h-[62vh] overflow-auto flex justify-center bg-[#09090b] rounded-2xl p-1 border border-zinc-800/80">
+            <div class="w-full max-h-[62vh] overflow-auto flex justify-center bg-[#09090b] rounded-2xl p-1 border border-white/[0.08]">
                 <img id="previewModalImg" class="max-h-[60vh] w-auto object-contain rounded-xl select-none" alt="Лист конспекта" />
             </div>
 
             <!-- Action Buttons -->
             <div class="flex flex-wrap items-center justify-center gap-2 w-full pt-1">
-                <button id="btnPreviewSendTg" class="flex-1 min-w-[140px] px-4 py-2.5 bg-blue-600 hover:bg-blue-500 active:scale-98 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer shadow-md transition-all">
+                <button id="btnPreviewSendTg" class="flex-1 min-w-[140px] px-4 py-2.5 bg-blue-600 hover:bg-blue-500 active:scale-98 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer shadow-md transition-all">
                     <i data-lucide="send" class="w-3.5 h-3.5"></i> Отправить в Telegram
                 </button>
-                <button id="btnPreviewDownloadNative" class="flex-1 min-w-[140px] px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 active:scale-98 text-zinc-200 rounded-xl text-xs font-medium flex items-center justify-center gap-2 border border-zinc-700/60 cursor-pointer transition-all">
+                <button id="btnPreviewDownloadNative" class="flex-1 min-w-[140px] px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 active:scale-98 text-zinc-200 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 border border-white/[0.08] cursor-pointer transition-all">
                     <i data-lucide="download" class="w-3.5 h-3.5"></i> Скачать PNG
                 </button>
             </div>
@@ -939,7 +1006,7 @@
                 if (isDesktopOrTablet() && typeof tg.requestFullscreen === 'function' && !tg.isFullscreen) {
                     tg.requestFullscreen();
                 }
-                if (tg.setHeaderColor) tg.setHeaderColor('#0f0f12');
+                if (tg.setHeaderColor) tg.setHeaderColor('#0c0c11');
                 if (tg.setBackgroundColor) tg.setBackgroundColor('#09090b');
             } catch(e) {
                 console.warn('Telegram WebApp init warning:', e);
@@ -1043,7 +1110,6 @@
         let availablePlans = [];
 
         async function fetchUserStatus() {
-            // Мгновенная проверка Telegram initDataUnsafe для Создателя
             const clientUserId = tg?.initDataUnsafe?.user?.id;
             const tgUser = tg?.initDataUnsafe?.user || null;
 
@@ -1101,7 +1167,7 @@
                 if (btnOpenAdmin) btnOpenAdmin.classList.remove('hidden');
                 if (headerStatus) headerStatus.innerHTML = `<span class="hidden sm:inline text-amber-300 font-bold">👑 СОЗДАТЕЛЬ</span><span class="sm:hidden text-amber-300 font-bold">VIP 👑</span>`;
                 if (headerBtn) {
-                    headerBtn.className = "px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer bg-gradient-to-r from-purple-500/25 to-amber-500/25 text-amber-300 border border-amber-400/80 shadow-[0_0_12px_rgba(245,158,11,0.25)] shrink-0";
+                    headerBtn.className = "px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer bg-gradient-to-r from-purple-500/25 to-amber-500/25 text-amber-300 border border-amber-400/80 shadow-[0_0_15px_rgba(245,158,11,0.25)] shrink-0";
                 }
                 if (modalUserStatusText) {
                     modalUserStatusText.innerText = "Создатель проекта • Пожизненный полный PRO-доступ навсегда";
@@ -1114,7 +1180,7 @@
                 if (btnOpenAdmin) btnOpenAdmin.classList.add('hidden');
                 if (headerStatus) headerStatus.innerHTML = `<span class="text-amber-300 font-bold">👑 PRO</span>`;
                 if (headerBtn) {
-                    headerBtn.className = "px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer bg-gradient-to-r from-amber-500/25 to-yellow-500/20 text-amber-300 border border-amber-400/80 shadow-[0_0_12px_rgba(245,158,11,0.25)] shrink-0";
+                    headerBtn.className = "px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer bg-gradient-to-r from-amber-500/25 to-yellow-500/20 text-amber-300 border border-amber-400/80 shadow-[0_0_15px_rgba(245,158,11,0.25)] shrink-0";
                 }
                 if (modalUserStatusText) {
                     if (currentUser.pro_expires_at) {
@@ -1132,7 +1198,7 @@
                 if (btnOpenAdmin) btnOpenAdmin.classList.add('hidden');
                 if (headerStatus) headerStatus.innerHTML = `<span class="hidden sm:inline">Тарифы ⭐</span><span class="sm:hidden">⭐ PRO</span>`;
                 if (headerBtn) {
-                    headerBtn.className = "px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer bg-gradient-to-r from-amber-500/20 via-yellow-500/15 to-amber-600/20 text-amber-300 border border-amber-500/50 hover:border-amber-400 shadow-sm active:scale-95 shrink-0";
+                    headerBtn.className = "px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer bg-gradient-to-r from-amber-500/20 via-yellow-500/15 to-amber-600/20 text-amber-300 border border-amber-500/50 hover:border-amber-400 shadow-sm active:scale-95 shrink-0";
                 }
                 if (modalUserStatusText) modalUserStatusText.innerText = "Бесплатный тариф (с водяным знаком)";
                 if (modalStatusBadge) {
@@ -1162,17 +1228,17 @@
                 const isPopular = plan.is_popular;
                 card.className = `p-4 rounded-2xl flex flex-col justify-between transition-all relative ${
                     isPopular 
-                    ? 'bg-gradient-to-b from-[#1c1c24] to-[#14141a] border-2 border-amber-500/80 shadow-[0_0_20px_rgba(245,158,11,0.15)] ring-1 ring-amber-500/30' 
-                    : 'bg-[#0f0f13] border border-zinc-800 hover:border-zinc-700'
+                    ? 'bg-gradient-to-b from-[#1e1e28] to-[#14141c] border-2 border-amber-500/80 shadow-[0_0_25px_rgba(245,158,11,0.2)] ring-1 ring-amber-500/40' 
+                    : 'bg-[#0f0f15] border border-white/[0.08] hover:border-white/20'
                 }`;
 
                 card.innerHTML = `
                     <div>
-                        ${plan.badge ? `<span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider mb-2.5 ${isPopular ? 'bg-amber-500 text-zinc-950 font-bold' : 'bg-zinc-800 text-zinc-300'}">${plan.badge}</span>` : ''}
+                        ${plan.badge ? `<span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider mb-2.5 ${isPopular ? 'bg-amber-400 text-zinc-950 font-black' : 'bg-zinc-800 text-zinc-300'}">${plan.badge}</span>` : ''}
                         <h4 class="text-sm font-bold text-white mb-1">${plan.name}</h4>
                         <div class="flex items-baseline gap-1 my-2.5">
-                            <span class="text-2xl font-black text-amber-400 tracking-tight">${plan.stars}</span>
-                            <span class="text-xs font-semibold text-amber-300/80">⭐ Stars</span>
+                            <span class="text-2xl font-black text-amber-400 tracking-tight font-mono">${plan.stars}</span>
+                            <span class="text-xs font-semibold text-amber-300/90">⭐ Stars</span>
                         </div>
                         <p class="text-zinc-400 text-[11px] leading-relaxed mb-3">${plan.description}</p>
                         <ul class="space-y-1.5 text-[11px] text-zinc-300 mb-4">
@@ -1186,7 +1252,7 @@
                     </div>
                     <button class="btn-buy-plan w-full py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-sm active:scale-95 ${
                         isPopular
-                        ? 'bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-zinc-950 shadow-[0_2px_10px_rgba(245,158,11,0.3)]'
+                        ? 'bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-zinc-950 shadow-[0_2px_12px_rgba(245,158,11,0.3)]'
                         : 'bg-zinc-800 hover:bg-zinc-700 text-white'
                     }" data-plan="${plan.id}">
                         <span>Купить за ${plan.stars} ⭐</span>
@@ -1330,14 +1396,14 @@
 
                 users.forEach(u => {
                     const row = document.createElement('div');
-                    row.className = "flex items-center justify-between p-2.5 sm:p-3 rounded-xl bg-[#0e0e13] border border-zinc-800/80 hover:border-zinc-700/80 text-xs gap-2 transition-colors";
+                    row.className = "flex items-center justify-between p-2.5 sm:p-3 rounded-xl bg-[#0b0b12] border border-white/[0.08] hover:border-zinc-700 text-xs gap-2 transition-colors";
                     
                     const isAdm = u.is_admin;
                     const isPro = u.is_pro;
                     const statusBadge = isAdm
-                        ? `<span class="px-2.5 py-0.5 rounded-lg bg-purple-500/20 text-purple-300 font-semibold border border-purple-500/40 text-[11px] whitespace-nowrap shrink-0">👑 Создатель</span>`
+                        ? `<span class="px-2.5 py-0.5 rounded-lg bg-purple-500/20 text-purple-300 font-bold border border-purple-500/40 text-[11px] whitespace-nowrap shrink-0">👑 Создатель</span>`
                         : (isPro
-                            ? `<span class="px-2 py-0.5 rounded-lg bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/40 text-[11px] whitespace-nowrap shrink-0">⭐ PRO</span>`
+                            ? `<span class="px-2 py-0.5 rounded-lg bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40 text-[11px] whitespace-nowrap shrink-0">⭐ PRO</span>`
                             : `<span class="px-2 py-0.5 rounded-lg bg-zinc-800 text-zinc-400 text-[11px] whitespace-nowrap shrink-0">Free</span>`);
 
                     const name = u.first_name || (u.username ? `@${u.username}` : 'Аноним');
@@ -1355,7 +1421,7 @@
 
                     row.innerHTML = `
                         <div class="flex items-center gap-2 min-w-0 flex-1">
-                            <span class="font-mono text-zinc-400 text-[11px] sm:text-xs shrink-0 select-all">${u.telegram_id}</span>
+                            <span class="font-mono text-zinc-400 text-[11px] sm:text-xs shrink-0 select-all font-semibold">${u.telegram_id}</span>
                             <span class="font-medium text-white text-xs sm:text-sm truncate min-w-0" title="${name}">${name}</span>
                             ${statusBadge}
                         </div>
@@ -1559,7 +1625,7 @@
 
             const activeBtn = document.getElementById(activeNavId);
             if (activeBtn) {
-                activeBtn.className = "flex-1 py-1.5 flex flex-col items-center gap-1 text-amber-400 text-[10px] font-semibold transition-all";
+                activeBtn.className = "flex-1 py-1.5 flex flex-col items-center gap-1 text-amber-400 text-[10px] font-bold transition-all";
             }
 
             if (tg?.HapticFeedback) tg.HapticFeedback.selectionChanged();
@@ -1715,10 +1781,12 @@
                 tabs.forEach(t => {
                     document.getElementById(t.tab).classList.add('hidden');
                     const b = document.getElementById(t.btn);
-                    b.className = "flex-1 min-w-[65px] sm:min-w-0 py-2.5 sm:py-3 px-2 flex items-center justify-center gap-1 sm:gap-1.5 border-b-2 border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-[#121215] transition-all cursor-pointer shrink-0 sm:shrink";
+                    b.className = "flex-1 min-w-[65px] sm:min-w-0 py-2 sm:py-2.5 px-2 flex items-center justify-center gap-1 sm:gap-1.5 rounded-xl border border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40 transition-all cursor-pointer shrink-0 sm:shrink";
                 });
                 document.getElementById(tab).classList.remove('hidden');
-                btnEl.className = "flex-1 min-w-[65px] sm:min-w-0 py-2.5 sm:py-3 px-2 flex items-center justify-center gap-1 sm:gap-1.5 border-b-2 border-amber-500 text-zinc-100 bg-[#131317] transition-all cursor-pointer shrink-0 sm:shrink";
+                btnEl.className = "flex-1 min-w-[65px] sm:min-w-0 py-2 sm:py-2.5 px-2 flex items-center justify-center gap-1 sm:gap-1.5 rounded-xl border border-amber-500/40 text-amber-300 bg-amber-500/10 shadow-sm transition-all cursor-pointer shrink-0 sm:shrink font-semibold";
+
+                if (tg?.HapticFeedback) tg.HapticFeedback.selectionChanged();
 
                 // Show/hide live sticky mini preview for parameters adjustments on mobile
                 const stickyPreview = document.getElementById('stickyParamPreview');
@@ -1808,9 +1876,9 @@
 
             inkBtns.forEach(btn => {
                 if (btn.dataset.color.toLowerCase() === color.toLowerCase()) {
-                    btn.className = "ink-btn flex items-center gap-2 p-2 rounded-xl bg-[#0a0a0d] border border-amber-500/80 text-xs text-zinc-100 transition-all cursor-pointer ring-1 ring-amber-500/30";
+                    btn.className = "ink-btn flex items-center gap-2 p-2 rounded-xl bg-[#09090e] border border-amber-500/80 text-xs text-zinc-100 transition-all cursor-pointer ring-1 ring-amber-500/40 shadow-sm";
                 } else {
-                    btn.className = "ink-btn flex items-center gap-2 p-2 rounded-xl bg-[#0a0a0d] border border-zinc-800 hover:border-zinc-700 text-xs text-zinc-300 transition-all cursor-pointer";
+                    btn.className = "ink-btn flex items-center gap-2 p-2 rounded-xl bg-[#09090e] border border-white/[0.08] hover:border-zinc-700 text-xs text-zinc-300 transition-all cursor-pointer";
                 }
             });
             triggerRedraw();
@@ -1832,23 +1900,23 @@
 
         // Example text button
         document.getElementById('btnSampleText').addEventListener('click', () => {
-            textInput.value = `Тема 14: Параллельные вычисления и многопоточность
+            textInput.value = `Тема 14: Архитектура распределённых систем и микросервисов
 
-1. Процессы и потоки:
-Поток (thread) — наименьшая единица обработки, исполнение которой может быть назначено ядром ОС. В отличие от тяжеловесных процессов, потоки одного процесса разделяют общее адресное пространство памяти.
+1. Основные характеристики распределённой системы:
+Распределённая система представляет собой совокупность независимых вычислительных узлов, которые представляются пользователям как единое целое.
 
-2. Состояние гонки (Race Condition):
-Возникает, когда несколько потоков одновременно обращаются к общему ресурсу, и результат зависит от порядка выполнения.
-Для предотвращения используются:
-- Мьютексы (Mutex / Lock)
-- Семафоры (Semaphores)
-- Атомарные операции (Atomic CAS)
+2. Принципы надёжности (Fault Tolerance):
+- Отсутствие единой точки отказа (Single Point of Failure - SPOF)
+- Изоляция сбоев (Circuit Breaker pattern)
+- Graceful degradation — сохранение базовой функциональности при деградации второстепенных модулей
 
-3. Закон Амдала:
-Ограничивает максимальный прирост производительности системы при увеличении числа ядер. Ускорение зависит от доли последовательного кода:
-S(N) = 1 / ((1 - P) + P/N)
+3. CAP-теорема Эрика Брюэра:
+В любой распределенной системе хранения данных возможно обеспечить не более двух свойств из трех:
+- C (Consistency) — согласованность данных
+- A (Availability) — доступность
+- P (Partition Tolerance) — устойчивость к разделению сети
 
-Вывод: Оптимизация многопоточных алгоритмов требует минимизации критических секций.`;
+Вывод: При проектировании высоконагруженных платформ ключевым фактором является осознанный компромисс между консистентностью и скоростью отклика.`;
             state.text = textInput.value;
             updateStats();
             triggerRedraw();
@@ -1897,15 +1965,15 @@ S(N) = 1 / ((1 - P) + P/N)
         function setViewMode(mode) {
             state.viewMode = mode;
             [viewSpreadBtn, viewListBtn, viewGridBtn].forEach(btn => {
-                btn.className = "px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-400 hover:text-zinc-200 flex items-center gap-1.5 cursor-pointer transition-colors";
+                btn.className = "px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-400 hover:text-zinc-200 flex items-center gap-1.5 cursor-pointer transition-colors";
             });
 
             if (mode === 'spread') {
-                viewSpreadBtn.className = "px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 text-zinc-100 shadow-sm flex items-center gap-1.5 cursor-pointer transition-colors";
+                viewSpreadBtn.className = "px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-800 text-zinc-100 shadow-sm flex items-center gap-1.5 cursor-pointer transition-colors";
             } else if (mode === 'list') {
-                viewListBtn.className = "px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 text-zinc-100 shadow-sm flex items-center gap-1.5 cursor-pointer transition-colors";
+                viewListBtn.className = "px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-800 text-zinc-100 shadow-sm flex items-center gap-1.5 cursor-pointer transition-colors";
             } else if (mode === 'grid') {
-                viewGridBtn.className = "px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 text-zinc-100 shadow-sm flex items-center gap-1.5 cursor-pointer transition-colors";
+                viewGridBtn.className = "px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-800 text-zinc-100 shadow-sm flex items-center gap-1.5 cursor-pointer transition-colors";
             }
             renderViewLayout();
         }
@@ -2143,8 +2211,8 @@ S(N) = 1 / ((1 - P) + P/N)
                 generatedCanvases.forEach(canvas => {
                     const ctx = canvas.getContext('2d');
                     ctx.save();
-                    ctx.font = "bold 13px 'Segoe UI', Roboto, sans-serif";
-                    ctx.fillStyle = "rgba(100, 100, 115, 0.45)";
+                    ctx.font = "bold 13px 'Plus Jakarta Sans', -apple-system, sans-serif";
+                    ctx.fillStyle = "rgba(100, 100, 120, 0.45)";
                     ctx.textAlign = "center";
                     ctx.textBaseline = "bottom";
                     ctx.fillText("Handwriter Studio • @HandwriterStudio_bot", canvas.width / 2, canvas.height - 18);
@@ -2185,7 +2253,7 @@ S(N) = 1 / ((1 - P) + P/N)
 
                     if (total === 1) {
                         const singleWrapper = document.createElement('div');
-                        singleWrapper.className = "flex items-center justify-center bg-[#121216] p-4 rounded-3xl border border-zinc-800/80 shadow-[0_30px_70px_-15px_rgba(0,0,0,0.85)]";
+                        singleWrapper.className = "flex items-center justify-center bg-[#13131a] p-4 rounded-3xl border border-white/[0.08] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.85)] ring-1 ring-white/5";
                         singleWrapper.appendChild(createPageCard(1, generatedCanvases[0], false));
                         canvasContainer.appendChild(singleWrapper);
                     } else {
@@ -2194,7 +2262,7 @@ S(N) = 1 / ((1 - P) + P/N)
                             const p2 = i + 2;
 
                             const spreadWrapper = document.createElement('div');
-                            spreadWrapper.className = "flex items-center justify-center gap-0 bg-[#121216] p-4 rounded-3xl border border-zinc-800/80 shadow-[0_30px_70px_-15px_rgba(0,0,0,0.85)] relative";
+                            spreadWrapper.className = "flex items-center justify-center gap-0 bg-[#13131a] p-4 rounded-3xl border border-white/[0.08] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.85)] ring-1 ring-white/5 relative";
                             spreadWrapper.appendChild(createPageCard(p1, generatedCanvases[p1 - 1], false));
 
                             if (p2 <= total) {
@@ -2232,7 +2300,7 @@ S(N) = 1 / ((1 - P) + P/N)
         // ==========================================
         // STICKY MINI-PREVIEW FOR PARAMETERS TABS (MOBILE)
         // ==========================================
-        let miniPreviewMode = 'crop'; // 'crop' (zoomed into text lines) or 'full' (entire sheet)
+        let miniPreviewMode = 'crop';
         let miniPreviewCollapsed = false;
 
         const stickyParamPreview = document.getElementById('stickyParamPreview');
@@ -2253,8 +2321,6 @@ S(N) = 1 / ((1 - P) + P/N)
             if (!ctx) return;
 
             if (miniPreviewMode === 'crop') {
-                // High-resolution zoomed view of top text lines
-                // Focus on margin and first 5-6 lines so changes in jitter, font-size, line spacing, slant, ink are immediately obvious
                 const cropW = srcCanvas.width;
                 const cropH = Math.min(srcCanvas.height, Math.max(260, srcCanvas.width * 0.42));
                 const cropY = Math.max(0, (state.startY || 60) - 35);
@@ -2266,7 +2332,6 @@ S(N) = 1 / ((1 - P) + P/N)
                 ctx.imageSmoothingQuality = 'high';
                 ctx.drawImage(srcCanvas, 0, cropY, cropW, cropH, 0, 0, cropW, cropH);
             } else {
-                // Full sheet view (entire page scaled)
                 liveParamCanvas.width = srcCanvas.width;
                 liveParamCanvas.height = srcCanvas.height;
 
@@ -2279,16 +2344,16 @@ S(N) = 1 / ((1 - P) + P/N)
         if (btnMiniCrop && btnMiniFull) {
             btnMiniCrop.addEventListener('click', () => {
                 miniPreviewMode = 'crop';
-                btnMiniCrop.className = "px-2 py-0.5 rounded-md bg-zinc-800 text-amber-300 font-semibold cursor-pointer transition-all";
-                btnMiniFull.className = "px-2 py-0.5 rounded-md text-zinc-400 hover:text-white cursor-pointer transition-all";
+                btnMiniCrop.className = "px-2.5 py-1 rounded-md bg-amber-500/20 text-amber-300 font-semibold cursor-pointer transition-all border border-amber-500/30";
+                btnMiniFull.className = "px-2.5 py-1 rounded-md text-zinc-400 hover:text-white cursor-pointer transition-all";
                 updateParamPreview();
                 if (window.Telegram?.WebApp?.HapticFeedback) window.Telegram.WebApp.HapticFeedback.selectionChanged();
             });
 
             btnMiniFull.addEventListener('click', () => {
                 miniPreviewMode = 'full';
-                btnMiniFull.className = "px-2 py-0.5 rounded-md bg-zinc-800 text-amber-300 font-semibold cursor-pointer transition-all";
-                btnMiniCrop.className = "px-2 py-0.5 rounded-md text-zinc-400 hover:text-white cursor-pointer transition-all";
+                btnMiniFull.className = "px-2.5 py-1 rounded-md bg-amber-500/20 text-amber-300 font-semibold cursor-pointer transition-all border border-amber-500/30";
+                btnMiniCrop.className = "px-2.5 py-1 rounded-md text-zinc-400 hover:text-white cursor-pointer transition-all";
                 updateParamPreview();
                 if (window.Telegram?.WebApp?.HapticFeedback) window.Telegram.WebApp.HapticFeedback.selectionChanged();
             });
@@ -2366,14 +2431,14 @@ S(N) = 1 / ((1 - P) + P/N)
 
             const canvasBox = document.createElement('div');
             canvasBox.className = isInline
-                ? "w-full max-w-full bg-[#121216] shadow-xl rounded-2xl p-2 sm:p-2.5 flex justify-center items-center overflow-hidden border border-zinc-800/80 ring-1 ring-white/5 relative transition-all cursor-pointer hover:border-zinc-700"
-                : "max-h-[calc(100vh-14rem)] max-w-full bg-[#121216] shadow-2xl rounded-2xl p-2.5 flex justify-center items-center overflow-hidden border border-zinc-800/80 ring-1 ring-white/5 relative transition-all hover:border-zinc-700 cursor-pointer";
+                ? "w-full max-w-full bg-[#111117] shadow-xl rounded-2xl p-2 sm:p-2.5 flex justify-center items-center overflow-hidden border border-white/[0.08] ring-1 ring-white/5 relative transition-all cursor-pointer hover:border-zinc-700"
+                : "max-h-[calc(100vh-14rem)] max-w-full bg-[#111117] shadow-2xl rounded-2xl p-2.5 flex justify-center items-center overflow-hidden border border-white/[0.08] ring-1 ring-white/5 relative transition-all hover:border-zinc-700 cursor-pointer";
             canvasBox.title = "Нажмите для открытия и сохранения фото на телефон";
             canvasBox.addEventListener('click', () => openImagePreview(canvas, pageNum));
 
             // Page Badge
             const badge = document.createElement('div');
-            badge.className = "absolute top-3.5 left-3.5 bg-black/85 text-zinc-300 text-[10px] font-mono px-2 py-0.5 rounded-md backdrop-blur-md border border-zinc-800 shadow-md flex items-center gap-1.5 z-10 pointer-events-none";
+            badge.className = "absolute top-3.5 left-3.5 bg-black/85 text-zinc-300 text-[10px] font-mono px-2 py-0.5 rounded-md backdrop-blur-md border border-white/10 shadow-md flex items-center gap-1.5 z-10 pointer-events-none";
             badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> Лист ${pageNum} ${pageNum % 2 === 0 ? '(Чётный)' : '(Нечётный)'}`;
             canvasBox.appendChild(badge);
 
@@ -2389,7 +2454,7 @@ S(N) = 1 / ((1 - P) + P/N)
 
             // Photo Preview Button (Great for saving on mobile)
             const zoomBtn = document.createElement('button');
-            zoomBtn.className = "px-3 py-1.5 bg-[#141418] hover:bg-[#1c1c22] text-amber-300 hover:text-amber-200 rounded-xl text-xs font-medium flex items-center gap-1.5 border border-zinc-800 transition-colors cursor-pointer shadow-sm";
+            zoomBtn.className = "px-3 py-1.5 bg-[#14141d] hover:bg-[#1c1c28] text-amber-300 hover:text-amber-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-white/[0.08] transition-colors cursor-pointer shadow-sm";
             zoomBtn.innerHTML = `<i data-lucide="maximize-2" class="w-3.5 h-3.5 text-amber-400"></i> Фото`;
             zoomBtn.title = "Открыть фото для сохранения в галерею смартфона";
             zoomBtn.addEventListener('click', (e) => {
@@ -2399,7 +2464,7 @@ S(N) = 1 / ((1 - P) + P/N)
 
             // Copy to Clipboard Button
             const copyBtn = document.createElement('button');
-            copyBtn.className = "px-3 py-1.5 bg-[#141418] hover:bg-[#1c1c22] text-zinc-300 hover:text-white rounded-xl text-xs font-medium flex items-center gap-1.5 border border-zinc-800 transition-all cursor-pointer shadow-sm active:scale-95";
+            copyBtn.className = "px-3 py-1.5 bg-[#14141d] hover:bg-[#1c1c28] text-zinc-300 hover:text-white rounded-xl text-xs font-medium flex items-center gap-1.5 border border-white/[0.08] transition-all cursor-pointer shadow-sm active:scale-95";
             copyBtn.innerHTML = `<i data-lucide="copy" class="w-3.5 h-3.5 text-zinc-400"></i> Копировать`;
             copyBtn.title = "Скопировать лист в буфер обмена";
             copyBtn.addEventListener('click', (e) => {
@@ -2444,9 +2509,9 @@ S(N) = 1 / ((1 - P) + P/N)
                 }, 30);
             });
 
-            // Download PNG Button (Instant visual feedback + Stealth name for PRO)
+            // Download PNG Button
             const dlBtn = document.createElement('button');
-            dlBtn.className = "px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-xl text-xs font-medium flex items-center gap-1.5 border border-zinc-700/60 transition-all cursor-pointer shadow-sm active:scale-95";
+            dlBtn.className = "px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-white/[0.08] transition-all cursor-pointer shadow-sm active:scale-95";
             dlBtn.innerHTML = `<i data-lucide="download" class="w-3.5 h-3.5 text-zinc-300"></i> PNG`;
             dlBtn.title = "Скачать этот лист в высоком качестве";
             dlBtn.addEventListener('click', (e) => {
@@ -2454,19 +2519,15 @@ S(N) = 1 / ((1 - P) + P/N)
                 if (dlBtn.dataset.busy === "1") return;
                 dlBtn.dataset.busy = "1";
 
-                // 1. Мгновенная тактильная отдача на пальце
                 if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
 
-                // 2. Мгновенная смена состояния кнопки на лоадер
                 const origHtml = dlBtn.innerHTML;
                 dlBtn.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin text-amber-400"></i> Отправка...`;
                 dlBtn.classList.add('opacity-80', 'pointer-events-none', 'ring-1', 'ring-amber-500/50');
                 if (window.lucide) lucide.createIcons();
 
-                // 3. Мгновенный информативный тост со спиннером
                 showToast(`Формируем и отправляем лист ${pageNum}...`, false, true);
 
-                // Даем браузеру отрисовать анимацию лоадера перед конвертацией Canvas
                 setTimeout(() => {
                     canvas.toBlob(async (blob) => {
                         if (!blob) {
@@ -2605,10 +2666,10 @@ S(N) = 1 / ((1 - P) + P/N)
                         const card = document.createElement('div');
                         const isSelected = state.currentTemplateId === t.filename;
 
-                        card.className = `p-2 rounded-xl bg-[#0a0a0d] border ${isSelected ? 'border-amber-500/90 ring-1 ring-amber-500/40' : 'border-zinc-800 hover:border-zinc-700'} flex flex-col gap-1.5 cursor-pointer transition-all group relative overflow-hidden`;
+                        card.className = `p-2 rounded-xl bg-[#0b0b12] border ${isSelected ? 'border-amber-500/90 ring-1 ring-amber-500/40' : 'border-white/[0.08] hover:border-zinc-700'} flex flex-col gap-1.5 cursor-pointer transition-all group relative overflow-hidden`;
 
                         card.innerHTML = `
-                            <div class="h-20 w-full rounded-lg bg-zinc-900 overflow-hidden relative border border-zinc-800/80">
+                            <div class="h-20 w-full rounded-lg bg-zinc-900 overflow-hidden relative border border-white/[0.08]">
                                 <img src="${t.url}" class="w-full h-full object-cover">
                                 ${!t.is_default ? `
                                     <button class="btn-del-template absolute top-1 right-1 p-1 bg-red-950/80 hover:bg-red-800 text-white rounded-md text-[10px] opacity-0 group-hover:opacity-100 transition-opacity" data-id="${t.filename}" title="Удалить фон">
@@ -2616,7 +2677,7 @@ S(N) = 1 / ((1 - P) + P/N)
                                     </button>
                                 ` : ''}
                             </div>
-                            <span class="text-[11px] font-medium text-zinc-300 truncate" title="${t.name}">${t.name}</span>
+                            <span class="text-[11px] font-semibold text-zinc-300 truncate" title="${t.name}">${t.name}</span>
                         `;
 
                         card.addEventListener('click', (e) => {
@@ -2703,9 +2764,9 @@ S(N) = 1 / ((1 - P) + P/N)
                         const fontOption = document.createElement('div');
                         const isCurrent = state.fontName === f.name || (f.is_default && state.fontName === 'HandwrittenFont');
 
-                        fontOption.className = `p-2 rounded-xl bg-[#0a0a0d] border ${isCurrent ? 'border-amber-500/80 text-amber-300 font-semibold' : 'border-zinc-800 text-zinc-300 hover:border-zinc-700'} text-xs flex justify-between items-center cursor-pointer transition-colors`;
+                        fontOption.className = `p-2.5 rounded-xl bg-[#09090e] border ${isCurrent ? 'border-amber-500/80 text-amber-300 font-semibold shadow-sm' : 'border-white/[0.08] text-zinc-300 hover:border-zinc-700'} text-xs flex justify-between items-center cursor-pointer transition-colors`;
                         fontOption.innerHTML = `
-                            <span>${f.name}</span>
+                            <span class="font-medium">${f.name}</span>
                             ${isCurrent ? '<i data-lucide="check" class="w-3.5 h-3.5 text-amber-400"></i>' : ''}
                         `;
 
@@ -2749,7 +2810,7 @@ S(N) = 1 / ((1 - P) + P/N)
 
             allPresets.forEach((p) => {
                 const btn = document.createElement('button');
-                btn.className = "w-full text-left p-2.5 rounded-xl bg-[#0a0a0d] border border-zinc-800 hover:border-zinc-700 text-xs text-zinc-300 hover:text-white flex items-center justify-between transition-colors cursor-pointer";
+                btn.className = "w-full text-left p-2.5 rounded-xl bg-[#09090e] border border-white/[0.08] hover:border-zinc-700 text-xs text-zinc-300 hover:text-white flex items-center justify-between transition-colors cursor-pointer shadow-sm active:scale-98";
                 btn.innerHTML = `
                     <span class="font-medium truncate">${p.name}</span>
                     <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-zinc-600"></i>
@@ -2879,7 +2940,7 @@ S(N) = 1 / ((1 - P) + P/N)
                                 }
                             }
 
-                            // Для Telegram 8.0+: вызываем нативное скачивание на устройство и ДОЖИДАЕМСЯ подтверждения
+                            // Для Telegram 8.0+: вызываем нативное скачивание на устройство
                             let userAccepted = true;
                             if (tg.downloadFile && tg.isVersionAtLeast && tg.isVersionAtLeast('8.0') && result.download_url) {
                                 userAccepted = await new Promise((resolve) => {
@@ -2887,7 +2948,7 @@ S(N) = 1 / ((1 - P) + P/N)
                                     const timeout = setTimeout(() => {
                                         if (!settled) {
                                             settled = true;
-                                            resolve(true); // если тайм-аут, продолжаем
+                                            resolve(true);
                                         }
                                     }, 40000);
 
@@ -3048,7 +3109,7 @@ S(N) = 1 / ((1 - P) + P/N)
             if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
 
             const origPdfHtml = btnPdf.innerHTML;
-            btnPdf.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin text-amber-500"></i> <span class="hidden sm:inline">Сборка PDF...</span><span class="sm:hidden">Сборка...</span>`;
+            btnPdf.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin text-amber-500"></i> <span class="hidden sm:inline">Сборка PDF...</span><span class="sm:hidden font-mono">PDF...</span>`;
             btnPdf.classList.add('opacity-80', 'pointer-events-none');
             if (window.lucide) lucide.createIcons();
 
@@ -3138,7 +3199,7 @@ S(N) = 1 / ((1 - P) + P/N)
             if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
 
             const origZipHtml = btnZip.innerHTML;
-            btnZip.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin text-amber-400"></i> <span class="hidden sm:inline">Сборка ZIP...</span><span class="sm:hidden">Сборка...</span>`;
+            btnZip.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin text-amber-400"></i> <span class="hidden sm:inline">Сборка ZIP...</span><span class="sm:hidden font-mono">ZIP...</span>`;
             btnZip.classList.add('opacity-80', 'pointer-events-none');
             if (window.lucide) lucide.createIcons();
 
@@ -3265,7 +3326,6 @@ S(N) = 1 / ((1 - P) + P/N)
 
                         if (tg?.HapticFeedback) tg.HapticFeedback.selectionChanged();
 
-                        // Пауза 600мс перед следующим листом, чтобы системное меню Telegram успело закрыться
                         if (i < total - 1) {
                             await new Promise(r => setTimeout(r, 600));
                         }
