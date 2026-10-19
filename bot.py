@@ -91,13 +91,13 @@ def get_webapp_keyboard(user_id: Optional[int] = None) -> InlineKeyboardMarkup:
     buttons = [
         [
             InlineKeyboardButton(
-                text="✍️ Открыть Studio (PRO ✨)" if user_id in ADMIN_IDS else "✍️ Открыть Handwriter Studio",
+                text="✍️ Открыть Studio (PRO ✨)",
                 web_app=WebAppInfo(url=current_url),
             )
         ],
         [
             InlineKeyboardButton(
-                text="⭐ PRO Тарифы",
+                text="💎 Премиум (Безлимит активен ⭐)",
                 callback_data="show_plans",
             )
         ]
@@ -128,16 +128,16 @@ async def handle_start(message: Message):
 
     is_admin = user and user.id in ADMIN_IDS
 
-    admin_badge = "\n\n👑 **Вы авторизованы как Создатель проекта!** У вас пожизненный полный PRO-доступ без ограничений." if is_admin else ""
+    admin_badge = "\n\n👑 **Вы авторизованы как Создатель проекта!** У вас доступ к панели управления." if is_admin else ""
 
     text = (
         f"👋 **Привет, {user.first_name if user else 'друг'}!**\n\n"
         "Добро пожаловать в **Handwriter Studio** — профессиональный генератор рукописных конспектов и лекций.\n\n"
-        "✨ **Что умеет студия:**\n"
-        "• Превращает любой печатный текст в реалистичный рукописный почерк;\n"
-        "• Движок «Живой руки»: дрожание строк, разный наклон букв и нажим чернил;\n"
-        "• Развороты тетрадей в клетку, линейку или загрузка фото своей тетради;\n"
-        "• Моментальный экспорт в чистый многостраничный **PDF** или **ZIP**."
+        "🎉 **Вам активирован полный PRO-доступ без ограничений:**\n"
+        "• Неограниченный экспорт конспектов любого объема;\n"
+        "• Чистые страницы без водяных знаков;\n"
+        "• Маскировка названий файлов под камеру смартфона (IMG_...);\n"
+        "• Все почерки, стили тетрадей, нажим чернил и загрузка своих шрифтов."
         f"{admin_badge}\n\n"
         "👇 Нажмите кнопку ниже, чтобы запустить приложение прямо в Telegram:"
     )
@@ -147,16 +147,19 @@ async def handle_start(message: Message):
 
 @dp.message(Command("pro"))
 async def handle_pro(message: Message):
-    """Обработчик команды /pro для просмотра тарифов."""
+    """Обработчик команды /pro."""
     text = (
-        "💎 **Премиум возможности Handwriter Studio PRO**\n\n"
-        "Откройте приложение и перейдите во вкладку **«Тарифы ⭐»**, чтобы оплатить любой тариф прямо через **Telegram Stars**:\n\n"
+        "💎 **Премиум доступ Handwriter Studio PRO**\n\n"
+        "🎉 **Всем пользователям предоставлен полный безлимитный PRO-доступ!**\n\n"
+        "Вам уже открыты все возможности:\n"
+        "✅ Генерация любого количества страниц без водяных знаков;\n"
+        "✅ Маскировка файлов под камеру смартфона при отправке;\n"
+        "✅ Все премиум-почерки и стили чернил;\n"
+        "✅ Многостраничный экспорт в чистый PDF и ZIP.\n\n"
+        "Запустите Handwriter Studio и пользуйтесь без ограничений:"
     )
-    for p in PLANS.values():
-        badge = f" [{p.get('badge')}]" if p.get("badge") else ""
-        text += f"⭐ **{p['name']}**{badge} — `{p['stars']} Stars`\n_{p['description']}_\n\n"
 
-    await message.answer(text, parse_mode="Markdown", reply_markup=get_webapp_keyboard())
+    await message.answer(text, parse_mode="Markdown", reply_markup=get_webapp_keyboard(message.from_user.id if message.from_user else None))
 
 
 @dp.pre_checkout_query()
@@ -417,12 +420,15 @@ async def handle_show_plans_callback(callback_query):
         except Exception as e:
             logger.error(f"[BOT] Callback error registering user: {e}")
     text = (
-        "💎 **Премиум возможности Handwriter Studio PRO**\n\n"
-        "Откройте приложение и перейдите во вкладку **«Тарифы ⭐»**, чтобы оплатить любой тариф прямо через **Telegram Stars**:\n\n"
+        "💎 **Премиум доступ Handwriter Studio PRO**\n\n"
+        "🎉 **Всем пользователям предоставлен полный безлимитный PRO-доступ!**\n\n"
+        "Вам уже открыты все возможности:\n"
+        "✅ Генерация любого количества страниц без водяных знаков;\n"
+        "✅ Маскировка файлов под камеру смартфона при отправке;\n"
+        "✅ Все премиум-почерки и стили чернил;\n"
+        "✅ Многостраничный экспорт в чистый PDF и ZIP.\n\n"
+        "Запустите Handwriter Studio и пользуйтесь без ограничений:"
     )
-    for p in PLANS.values():
-        badge = f" [{p.get('badge')}]" if p.get("badge") else ""
-        text += f"⭐ **{p['name']}**{badge} — `{p['stars']} Stars`\n_{p['description']}_\n\n"
 
     try:
         await callback_query.message.answer(text, parse_mode="Markdown", reply_markup=get_webapp_keyboard(user.id if user else None))

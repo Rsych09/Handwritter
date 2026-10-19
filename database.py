@@ -10,6 +10,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     select,
+    update,
 )
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import declarative_base, relationship
@@ -78,7 +79,7 @@ class User(Base):
     telegram_id = Column(BigInteger, unique=True, index=True, nullable=False)
     username = Column(String(128), nullable=True)
     first_name = Column(String(128), nullable=True)
-    is_pro = Column(Boolean, default=False, nullable=False)
+    is_pro = Column(Boolean, default=True, nullable=False)
     pro_expires_at = Column(DateTime, nullable=True)
     stars_spent = Column(Integer, default=0, nullable=False)
     created_at = Column(DateTime, default=utc_now, nullable=False)
@@ -86,18 +87,8 @@ class User(Base):
     payments = relationship("Payment", back_populates="user", cascade="all, delete-orphan")
 
     def check_pro_active(self) -> bool:
-        """Проверяет, активен ли PRO-статус (для администратора всегда True)."""
-        if is_admin_id(self.telegram_id):
-            return True
-        if not self.is_pro:
-            return False
-        if self.pro_expires_at is None:
-            return True
-        now = utc_now()
-        expires = self.pro_expires_at
-        if expires.tzinfo is not None:
-            expires = expires.astimezone(timezone.utc).replace(tzinfo=None)
-        return expires > now
+        """Все пользователи имеют полный премиум доступ без ограничений."""
+        return True
 
     @property
     def is_admin(self) -> bool:
@@ -125,7 +116,8 @@ async def init_db():
     try:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
-        print("[DB] Tables initialized successfully.")
+            await conn.execute(update(User).values(is_pro=True, pro_expires_at=None))
+        print("[DB] Tables initialized successfully. All users granted PRO status.")
     except Exception as e:
         print(f"[DB WARN] Failed to initialize DB with {DATABASE_URL}: {e}")
         if "sqlite" not in DATABASE_URL:
@@ -135,7 +127,8 @@ async def init_db():
             AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
             async with engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)
-            print("[DB] SQLite fallback ready.")
+                await conn.execute(update(User).values(is_pro=True, pro_expires_at=None))
+            print("[DB] SQLite fallback ready. All users granted PRO status.")
 
 
 async def get_or_create_user(
@@ -143,7 +136,7 @@ async def get_or_create_user(
     username: Optional[str] = None,
     first_name: Optional[str] = None,
 ) -> User:
-    """Получить или зарегистрировать пользователя."""
+    """Получить или зарегистрировать пользователя (все пользователи получают PRO)."""
     tid = int(telegram_id)
     is_adm = is_admin_id(tid)
 
@@ -156,18 +149,18 @@ async def get_or_create_user(
                 telegram_id=tid,
                 username=username,
                 first_name=first_name,
-                is_pro=is_adm,
+                is_pro=True,
                 pro_expires_at=None,
                 created_at=utc_now(),
             )
             session.add(user)
             await session.commit()
             await session.refresh(user)
-            print(f"[DB] New user registered: ID={tid}, username={username}, name={first_name}")
+            print(f"[DB] New user registered with PRO: ID={tid}, username={username}, name={first_name}")
         else:
             updated = False
-            # Если это администратор, гарантируем активный PRO навсегда
-            if is_adm and not user.is_pro:
+            # Гарантируем активный PRO для всех пользователей
+            if not user.is_pro or user.pro_expires_at is not None:
                 user.is_pro = True
                 user.pro_expires_at = None
                 updated = True

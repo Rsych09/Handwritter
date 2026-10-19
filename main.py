@@ -270,7 +270,7 @@ async def list_fonts():
                     "name": display_name,
                     "url": f"/fonts/{file.name}",
                     "is_default": is_default,
-                    "is_pro": not is_default  # Кастомные/дополнительные шрифты доступны по PRO
+                    "is_pro": False  # Все шрифты доступны всем пользователям без ограничений
                 })
     return JSONResponse(fonts)
 
@@ -309,7 +309,7 @@ async def upload_font(file: UploadFile = File(...)):
             "name": safe_name.replace("_", " ").title(),
             "url": f"/fonts/{filename}",
             "is_default": False,
-            "is_pro": True
+            "is_pro": False
         })
     except Exception as e:
         if dest_path.exists():
@@ -389,16 +389,15 @@ async def get_user_status(
                     username=user_info.get("username"),
                     first_name=user_info.get("first_name"),
                 )
-                is_pro = user.check_pro_active() or is_admin
                 return JSONResponse({
                     "authenticated": True,
                     "user": {
                         "telegram_id": user.telegram_id,
                         "first_name": user.first_name or user_info.get("first_name", "Пользователь"),
                         "username": user.username or user_info.get("username"),
-                        "is_pro": is_pro,
+                        "is_pro": True,
                         "is_admin": is_admin,
-                        "pro_expires_at": user.pro_expires_at.isoformat() if user.pro_expires_at else None,
+                        "pro_expires_at": None,
                         "stars_spent": user.stars_spent,
                     }
                 })
@@ -412,7 +411,7 @@ async def get_user_status(
                     "telegram_id": tg_id,
                     "first_name": user_info.get("first_name", "Пользователь"),
                     "username": user_info.get("username"),
-                    "is_pro": is_admin,
+                    "is_pro": True,
                     "is_admin": is_admin,
                     "pro_expires_at": None,
                     "stars_spent": 0,
@@ -426,7 +425,7 @@ async def get_user_status(
             "telegram_id": 0,
             "first_name": "Гость",
             "username": None,
-            "is_pro": False,
+            "is_pro": True,
             "is_admin": False,
             "pro_expires_at": None,
             "stars_spent": 0,
@@ -683,17 +682,9 @@ async def export_and_send_to_telegram(
         if user_info and "id" in user_info:
             user_id = user_info["id"]
             db_user = await get_or_create_user(user_id)
-            is_pro = db_user.is_pro or (user_id in ADMIN_IDS)
+            is_pro = True
 
             msg_caption = caption if (caption is not None and caption.strip()) else ""
-            if not is_pro:
-                if safe_filename.endswith(".pdf"):
-                    safe_filename = "Handwriter_Notebook.pdf"
-                elif safe_filename.endswith(".zip"):
-                    safe_filename = "Handwriter_Notebook.zip"
-                elif safe_filename.endswith(".png"):
-                    safe_filename = "Handwriter_Page.png"
-                msg_caption = "✍️ Создано в Handwriter Studio (@HandwriterStudio_bot)\n⭐ В тарифах PRO названия файлов маскируются под камеру смартфона (IMG_...) и убирается подпись!"
 
             try:
                 from aiogram.types import BufferedInputFile
